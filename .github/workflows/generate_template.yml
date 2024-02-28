@@ -1,0 +1,40 @@
+name: Generate Project Structure
+
+on:
+  push:
+
+env:
+  template_directory: 'basic_python'
+  template_var_path: 'cookiecutter_inputs.json'
+  
+jobs:
+  generate_template:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+    - name: Create Cookiecutter Template
+      uses: jimmfan/cookiecutter-action@main
+      with:
+        template_directory: ${{ env.template_directory }}
+        template_var_path: ${{ env.template_var_path }}
+        workflow_token: ${{ secrets.WORKFLOW_TOKEN }}
+        
+    - name: Create and Push to Branch
+      run: |
+        BRANCH_NAME=${{ github.ref_name }}
+        # Configure Git with the provided environment variables
+        git config user.name "${{ env.GIT_USER_NAME }}"
+        git config user.email "${{ env.GIT_USER_EMAIL }}"
+        git checkout $BRANCH_NAME
+        git add .
+        git commit -m "Generate project structure with Cookiecutter"
+        git push -u origin $BRANCH_NAME
+      env:
+        GIT_USER_NAME: "GitHub Actions"
+        GIT_USER_EMAIL: "actions@github.com"
+        
+    # - name: Push to Branch
+    #   run: |
+    #     git push origin HEAD:main
+     
