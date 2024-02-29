@@ -70,3 +70,12 @@ def pdf_to_text_from_bytearray_update(pdf_bytearray):
     # Close the document
     doc.close()
     return text
+
+def save_pdf_to_file(pdf_bytes, file_path='output.pdf'):
+    with open(file_path, 'wb') as f:
+        f.write(pdf_bytes)
+    print(f"PDF saved to {file_path}. Please try opening it with a PDF reader.")
+
+
+save_pdf_to_file(pdf_bytes)
+
