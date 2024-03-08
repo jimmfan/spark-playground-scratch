@@ -79,3 +79,19 @@ def save_pdf_to_file(pdf_bytes, file_path='output.pdf'):
 
 save_pdf_to_file(pdf_bytes)
 
+
+
+from pyspark.sql.functions import udf, col, when, lit
+from pyspark.sql.types import StringType, MapType
+
+# Adjust your UDF to only take the necessary parameters
+process_pdf_udf_type1 = udf(lambda pdf_bytes, content_type: process_pdf_column(pdf_bytes, content_type, "type1"), MapType(StringType(), StringType()))
+process_pdf_udf_type2 = udf(lambda pdf_bytes, content_type: process_pdf_column(pdf_bytes, content_type, "type2"), MapType(StringType(), StringType()))
+
+# Apply the UDF conditionally based on the document type
+df = df.withColumn("parsed_data",
+                   when(col("documenttype") == "type1", process_pdf_udf_type1(col("pdf_data"), lit("pdf")))
+                   .otherwise(when(col("documenttype") == "type2", process_pdf_udf_type2(col("pdf_data"), lit("pdf")))
+                   ))
+
+# Further processing to split "parsed_data" into separate columns as needed
