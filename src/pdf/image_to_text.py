@@ -81,17 +81,25 @@ save_pdf_to_file(pdf_bytes)
 
 
 
-from pyspark.sql.functions import udf, col, when, lit
+from pyspark.sql.functions import udf, col
 from pyspark.sql.types import StringType, MapType
 
-# Adjust your UDF to only take the necessary parameters
-process_pdf_udf_type1 = udf(lambda pdf_bytes, content_type: process_pdf_column(pdf_bytes, content_type, "type1"), MapType(StringType(), StringType()))
-process_pdf_udf_type2 = udf(lambda pdf_bytes, content_type: process_pdf_column(pdf_bytes, content_type, "type2"), MapType(StringType(), StringType()))
+# Define the schema of your dictionary, assuming all possible keys are known
+schema = MapType(StringType(), StringType())
 
-# Apply the UDF conditionally based on the document type
-df = df.withColumn("parsed_data",
-                   when(col("documenttype") == "type1", process_pdf_udf_type1(col("pdf_data"), lit("pdf")))
-                   .otherwise(when(col("documenttype") == "type2", process_pdf_udf_type2(col("pdf_data"), lit("pdf")))
-                   ))
+# Create a UDF that wraps the process_pdf_column function, including the document type as a parameter
+process_pdf_udf = udf(process_pdf_column, schema)
+
+# Apply the UDF to your DataFrame
+df = df.withColumn("parsed_data", process_pdf_udf("pdf_data", lit("pdf"), "document_type"))
+
+# Now, assuming your keys are static and known (e.g., 'key1', 'key2'), you can directly expand "parsed_data" into columns
+df = df.withColumn("key1", df["parsed_data"]["key1"])
+df = df.withColumn("key2", df["parsed_data"]["key2"])
+# Repeat for all keys...
+
+# Display the result to verify
+df.show()
+
 
 # Further processing to split "parsed_data" into separate columns as needed
