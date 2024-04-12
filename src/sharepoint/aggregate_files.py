@@ -44,3 +44,26 @@ print(aggregated_df.head())
 
 output_file_path = "aggregated_data.xlsx"
 aggregated_df.to_excel(output_file_path, index=False)
+
+
+
+# LIST files
+def list_files_in_folder(folder):
+    """Recursively list all files and subfolder files in the given folder."""
+    ctx.load(folder)
+    ctx.execute_query()
+
+    # Process each file in the current folder
+    files = folder.files
+    ctx.load(files)
+    ctx.execute_query()
+    for file in files:
+        print(f"File Name: {file.properties['Name']} - URL: {file.serverRelativeUrl}")
+
+    # Recursively process each subfolder
+    subfolders = folder.folders
+    ctx.load(subfolders)
+    ctx.execute_query()
+    for subfolder in subfolders:
+        print(f"Entering subfolder: {subfolder.properties['Name']}")
+        list_files_in_folder(subfolder)
