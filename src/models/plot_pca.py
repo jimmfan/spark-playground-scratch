@@ -317,3 +317,25 @@ for i in range(10):
 
 
 
+color_palette_3d = {
+    "vivid_red": "#e63946",
+    "deep_orange": "#f77f00",
+    "bright_yellow": "#fcbf49",
+    "lime_green": "#80b918",
+    "dark_green": "#006d77",
+    "teal_blue": "#00b4d8",
+    "navy_blue": "#023e8a",
+    "royal_blue": "#0077b6",
+    "ultramarine": "#3a0ca3",
+    "violet": "#7209b7",
+    "magenta": "#f72585",
+    "raspberry": "#d00000",
+    "maroon": "#6a040f",
+    "chocolate_brown": "#8338ec",
+    "olive_green": "#4a7c59",
+    "mustard_yellow": "#9a8c98",
+    "flamingo_pink": "#f4acb7",
+    "cinnamon": "#9d0208",
+    "charcoal_gray": "#495057",
+    "slate_gray": "#adb5bd"
+}
