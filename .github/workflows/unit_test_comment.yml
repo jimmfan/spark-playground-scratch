@@ -29,10 +29,12 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        pytest_summary=$(cat pytest_output.txt)
-        coverage_summary=$(cat coverage_output.txt)
-        comment_body="#### PyTest Results:\n\`\`\`\n$pytest_summary\n\`\`\`\n#### Coverage Report:\n\`\`\`\n$coverage_summary\n\`\`\`"
-        echo "$comment_body" > comment_body.md
-        curl -s -H "Authorization: token $GITHUB_TOKEN" \
-             -X POST -d "{\"body\": \"$(<comment_body.md)\"}" \
-             https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
+        pytest_summary=$(<pytest_output.txt)
+        coverage_summary=$(<coverage_output.txt)
+        comment_body="#### PyTest Results:\n\`\`\`\n${pytest_summary}\n\`\`\`\n#### Coverage Report:\n\`\`\`\n${coverage_summary}\n\`\`\`"
+        echo "{\"body\": \"$comment_body\"}" | jq . > payload.json
+        curl -s \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
