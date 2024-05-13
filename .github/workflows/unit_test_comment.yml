@@ -31,10 +31,19 @@ jobs:
       run: |
         pytest_summary=$(<pytest_output.txt)
         coverage_summary=$(<coverage_output.txt)
-        comment_body="#### PyTest Results:\n\`\`\`\n${pytest_summary}\n\`\`\`\n#### Coverage Report:\n\`\`\`\n${coverage_summary}\n\`\`\`"
-        echo "{\"body\": \"$comment_body\"}" | jq . > payload.json
+        # Escape double quotes in the output
+        pytest_summary=${pytest_summary//$'\"'/$'\\\"'}
+        coverage_summary=${coverage_summary//$'\"'/$'\\\"'}
+        # Prepare the JSON payload
+        json_payload=$(cat <<EOF
+    {
+      "body": "#### PyTest Results:\\n\`\`\`\\n${pytest_summary}\\n\`\`\`\\n#### Coverage Report:\\n\`\`\`\\n${coverage_summary}\\n\`\`\`"
+    }
+    EOF
+        )
+        # Use curl to send the API request
         curl -s \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Content-Type: application/json" \
-            -d @payload.json \
+            -d "$json_payload" \
             https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
