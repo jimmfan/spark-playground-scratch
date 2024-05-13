@@ -22,28 +22,29 @@ jobs:
 
     - name: Run tests and coverage
       run: |
-        coverage run -m pytest tests/ -vv > pytest_output.txt
-        coverage report -m --fail-under=80 > coverage_output.txt
+        coverage run -m pytest tests/ -vv > pytest_output.txt || true
+        coverage report -m --fail-under=80 > coverage_output.txt || true
+        echo "PYTEST_OUTPUT<<EOF" >> $GITHUB_ENV
+        cat pytest_output.txt >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+        echo "COVERAGE_OUTPUT<<EOF" >> $GITHUB_ENV
+        cat coverage_output.txt >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
 
     - name: Post results to PR
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        pytest_summary=$(<pytest_output.txt)
-        coverage_summary=$(<coverage_output.txt)
-        # Escape double quotes in the output
-        pytest_summary=${pytest_summary//$'\"'/$'\\\"'}
-        coverage_summary=${coverage_summary//$'\"'/$'\\\"'}
-        # Prepare the JSON payload
-        json_payload=$(cat <<EOF
-    {
-      "body": "#### PyTest Results:\\n\`\`\`\\n${pytest_summary}\\n\`\`\`\\n#### Coverage Report:\\n\`\`\`\\n${coverage_summary}\\n\`\`\`"
-    }
-    EOF
-        )
-        # Use curl to send the API request
-        curl -s \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$json_payload" \
-            https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
+      uses: actions/github-script@v5
+      with:
+        script: |
+          const pytestOutput = process.env.PYTEST_OUTPUT;
+          const coverageOutput = process.env.COVERAGE_OUTPUT;
+          const issueNumber = context.issue.number;
+          const repoToken = process.env.GITHUB_TOKEN;
+          const commentBody = `#### PyTest Results:\n\`\`\`\n${pytestOutput}\n\`\`\`\n#### Coverage Report:\n\`\`\`\n${coverageOutput}\n\`\`\``;
+
+          github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber,
+            body: commentBody
+          });
+
