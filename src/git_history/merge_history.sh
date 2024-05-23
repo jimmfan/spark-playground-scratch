@@ -15,25 +15,26 @@ git fetch bitbucket
 git checkout -b bitbucket-history bitbucket/main
 
 # Step 5: Identify and remove large files from Bitbucket history
-# Find CSV files larger than 100 MB
-large_files=$(git rev-list --objects --all | grep '\.csv' | while read -r hash name; do
+# Find CSV files larger than 100 MB and remove them
+git rev-list --objects --all | grep '\.csv' | while read -r hash name; do
   size=$(git cat-file -s "$hash")
   if [ $size -gt $((100 * 1024 * 1024)) ]; then
-    echo "$name"
+    echo "Removing $name ($size bytes)"
+    git filter-branch --force --index-filter "git rm --cached --ignore-unmatch $name" --prune-empty --tag-name-filter cat -- --all
   fi
-done)
-
-# Remove large files using git filter-repo
-for file in $large_files; do
-  git filter-repo --path "$file" --invert-paths
 done
 
-# Step 6: Rebase GitHub commits onto Bitbucket history
+# Step 6: Clean up and repack the repository
+rm -rf .git/refs/original/
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+# Step 7: Rebase GitHub commits onto Bitbucket history
 git checkout main
 git rebase bitbucket-history
 
-# Step 7: Resolve conflicts if there are any
+# Step 8: Resolve conflicts if there are any
 git rebase --continue
 
-# Step 8: Push the updated history to GitHub
+# Step 9: Push the updated history to GitHub
 git push origin main --force
