@@ -26,9 +26,20 @@ large_files=$(git rev-list --objects --all | grep '\.csv' | while read -r hash n
   fi
 done)
 
+# Step 5b for powershell
+$largeFiles = git rev-list --objects --all | ForEach-Object {
+    $entry = $_ -split " "
+    $hash = $entry[0]
+    $name = $entry[1]
+    $size = git cat-file -s $hash
+    if ($size -gt (100 * 1024 * 1024)) {
+        $name
+    }
+}
+
 # Remove large files using git filter-repo
 for file in $large_files; do
-  git filter-repo --path "$file" --invert-paths
+  python git-filter-repo --path "$file" --invert-paths
 done
 
 # Step 6: Merge Bitbucket history into the main branch
