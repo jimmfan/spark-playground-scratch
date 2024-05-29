@@ -37,24 +37,29 @@ $largeFiles = git rev-list --objects --all | ForEach-Object {
     }
 }
 
-# Remove large files using git filter-repo
-for file in $large_files; do
-  python git-filter-repo --path "$file" --invert-paths
-done
+# Step 6: Remove large files using git filter-repo
+if [ -s $LARGE_FILES_PATH ]; then
+  echo "Removing large files..."
+  git filter-repo --invert-paths --paths-from-file $LARGE_FILES_PATH
+else
+  echo "No large files to remove."
+fi
 
-# Step 6: Merge Bitbucket history into the main branch
+# Step 7: Clean up and repack the repository
+rm -rf .git/refs/original/
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+# Step 8: Merge Bitbucket history into a new branch based off main
 git checkout main
+git checkout -b $NEW_BRANCH
 git merge bitbucket-history
 
-# Step 7: Resolve conflicts if there are any
+# Step 9: Resolve conflicts if there are any
 # This step may need to be repeated if there are multiple conflicts
 git mergetool
-git commit -m "Merged Bitbucket history into main branch"
+git commit -m "Merged Bitbucket history into $NEW_BRANCH branch"
 
-# Step 8: Push the updated history to GitHub
+# Step 10: Push the new branch to GitHub
 git remote set-url origin $GITHUB_REPO_URL
-git push origin main --force
-
-# Clean up
-cd ..
-rm -rf github_repo bitbucket_repo
+git push origin $NEW_BRANCH
