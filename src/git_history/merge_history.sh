@@ -4,6 +4,8 @@
 GITHUB_REPO_URL="https://github.com/your_username/github_repo.git"
 BITBUCKET_REPO_URL="https://bitbucket.org/your_username/bitbucket_repo.git"
 
+NEW_BRANCH="bitbucket-merge"
+
 # Step 1: Clone both repositories
 git clone $GITHUB_REPO_URL github_repo
 git clone $BITBUCKET_REPO_URL bitbucket_repo
