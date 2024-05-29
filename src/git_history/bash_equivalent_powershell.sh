@@ -18,11 +18,16 @@ echo "Adding and fetching Bitbucket repo..."
 git remote add origin $BITBUCKET_REPO_PATH
 git fetch origin
 
-if (Test-Path $LARGE_FILES_PATH -PathType Leaf -and (Get-Item $LARGE_FILES_PATH).length -gt 0) {
-  Write-Output "Removing large files..."
-  git filter-repo --invert-paths --paths-from-file $LARGE_FILES_PATH
+if (Test-Path $LARGE_FILES_PATH -PathType Leaf) {
+    $file = Get-Item $LARGE_FILES_PATH
+    if ($file.Length -gt 0) {
+        Write-Output "Removing large files..."
+        git filter-repo --invert-paths --paths-from-file $LARGE_FILES_PATH
+    } else {
+        Write-Output "No large files to remove."
+    }
 } else {
-  Write-Output "No large files to remove."
+    Write-Output "No large files to remove."
 }
 
 # Step 4: Merge origin/master into the current branch
