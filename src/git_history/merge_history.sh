@@ -1,10 +1,13 @@
 #!/bin/bash
 
-# Define repository URLs
+# Exit immediately if a command exits with a non-zero status
+set -e
+
+# Define repository URLs and branch names
 GITHUB_REPO_URL="https://github.com/your_username/github_repo.git"
 BITBUCKET_REPO_URL="https://bitbucket.org/your_username/bitbucket_repo.git"
-
 NEW_BRANCH="bitbucket-merge"
+LARGE_FILES_PATH="large_files.txt"
 
 # Step 1: Clone both repositories
 git clone $GITHUB_REPO_URL github_repo
@@ -20,24 +23,21 @@ git fetch bitbucket
 # Step 4: Create a new branch for Bitbucket history
 git checkout -b bitbucket-history bitbucket/main
 
-# Step 5: Identify and remove large files from Bitbucket history using git filter-repo
-large_files=$(git rev-list --objects --all | grep '\.csv' | while read -r hash name; do
+# Verify the bitbucket-history branch
+echo "Verifying bitbucket-history branch..."
+git branch --list bitbucket-history
+git log --oneline -5
+
+# Step 5: Identify and save large files from Bitbucket history
+git rev-list --objects --all | while read -r hash name; do
   size=$(git cat-file -s "$hash")
   if [ $size -gt $((100 * 1024 * 1024)) ]; then
     echo "$name"
   fi
-done)
+done > $LARGE_FILES_PATH
 
-# Step 5b for powershell
-$largeFiles = git rev-list --objects --all | ForEach-Object {
-    $entry = $_ -split " "
-    $hash = $entry[0]
-    $name = $entry[1]
-    $size = git cat-file -s $hash
-    if ($size -gt (100 * 1024 * 1024)) {
-        $name
-    }
-}
+echo "Large files identified and saved to $LARGE_FILES_PATH:"
+cat $LARGE_FILES_PATH
 
 # Step 6: Remove large files using git filter-repo
 if [ -s $LARGE_FILES_PATH ]; then
@@ -55,6 +55,12 @@ git gc --prune=now --aggressive
 # Step 8: Merge Bitbucket history into a new branch based off main
 git checkout main
 git checkout -b $NEW_BRANCH
+
+# Verify the bitbucket-history branch before merging
+echo "Verifying bitbucket-history branch before merging..."
+git branch --list bitbucket-history
+git log bitbucket-history --oneline -5
+
 git merge bitbucket-history
 
 # Step 9: Resolve conflicts if there are any
