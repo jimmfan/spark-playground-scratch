@@ -1,7 +1,7 @@
 import os
 import yaml
 
-def create_pipeline_folders(jobs_folder):
+def create_pipeline_folders(jobs_folder, output_folder):
     # Get all pipeline scripts in the jobs folder
     pipeline_scripts = [f for f in os.listdir(jobs_folder) if f.endswith('.py')]
 
@@ -10,7 +10,7 @@ def create_pipeline_folders(jobs_folder):
         pipeline_name = os.path.splitext(script)[0]
 
         # Create the new folder path
-        pipeline_folder = os.path.join(jobs_folder, pipeline_name)
+        pipeline_folder = os.path.join(output_folder, pipeline_name)
         
         # Create the folder if it doesn't exist
         os.makedirs(pipeline_folder, exist_ok=True)
@@ -31,6 +31,8 @@ def create_pipeline_folders(jobs_folder):
 
     print("Pipeline folders created successfully.")
 
-# Specify the jobs folder
+# Specify the jobs folder and output folder
 jobs_folder = 'src/jobs'  # Adjust this path as needed
-create_pipeline_folders(jobs_folder)
+output_folder = 'src/pipelines'  # Adjust this path as needed
+
+create_pipeline_folders(jobs_folder, output_folder)
