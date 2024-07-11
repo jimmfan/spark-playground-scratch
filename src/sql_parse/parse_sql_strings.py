@@ -17,22 +17,26 @@ def strip_comments(query: str) -> str:
     query = re.sub(r"--.*", "", query)
     return query.strip()
 
-def extract_alias(query: str) -> str:
+def remove_outer_parentheses_and_alias(query: str) -> str:
     """
-    Extract alias from the SQL query.
+    Remove the outermost parentheses and alias from the SQL query.
     
     Parameters:
-    - query (str): The SQL query with potential alias.
+    - query (str): The SQL query to be normalized.
     
     Returns:
-    - tuple: The SQL query without alias and the alias itself.
+    - str: The SQL query without the outermost parentheses and alias.
     """
-    alias_match = re.search(r"\)\s+as\s+\w+\s*$", query, re.IGNORECASE)
-    alias = ""
-    if alias_match:
-        alias = alias_match.group(0)
-        query = query[:alias_match.start()].strip()
-    return query, alias
+    query = strip_comments(query)
+    
+    # Regular expression to match outermost parentheses with alias
+    pattern = re.compile(r'^\s*\(\s*(.*?)\s*\)\s+as\s+\w+\s*$', re.IGNORECASE | re.DOTALL)
+    
+    # Remove the outermost parentheses and alias
+    match = pattern.match(query)
+    if match:
+        return match.group(1).strip()
+    return query
 
 def normalize_sql_query(query: str, for_format: bool = False) -> str:
     """
