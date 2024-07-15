@@ -30,7 +30,8 @@ def remove_outer_parentheses_and_alias(query: str) -> str:
     query = strip_comments(query)
     
     # Regular expression to match outermost parentheses with alias
-    pattern = re.compile(r'^\s*\(\s*(.*?)\s*\)\s+as\s+\w+\s*$', re.IGNORECASE | re.DOTALL)
+    # pattern = re.compile(r'^\s*\(\s*(.*?)\s*\)\s+as\s+\w+\s*$', re.IGNORECASE | re.DOTALL)
+    pattern = re.compile(r'^\s*\((.*)\)\s*(as\s+\w+|\w+)?\s*$', re.IGNORECASE | re.DOTALL)
     
     # Remove the outermost parentheses and alias
     match = pattern.match(query)
