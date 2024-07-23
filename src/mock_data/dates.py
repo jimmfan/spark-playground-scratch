@@ -21,3 +21,5 @@ dates_df.show(truncate=False)
 
 # Stop the SparkSession
 spark.stop()
+
+print(len("from project_name.a_really_really_really_long_submodule_name_that_is_way_to_long_and_exceeds_80_characters.data"))
