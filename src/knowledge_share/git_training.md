@@ -75,14 +75,12 @@ Again, imagine two Windows Explorer windows side by side:
 Left Window (Shared Folder - Remote Repository):
 
 
-
 | Shared Folder   |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
 
 Right Window (My PC - Local Repository):
-
 
 
 | My Local Folder |
@@ -131,13 +129,11 @@ After running git fetch, it's like your local folder has an internal note about 
 
 Right Window (My PC - Local Repository After Fetch):
 
-
-| My Local Folder |
-|-----------------|
-| File1.txt       |
-| File2.txt       |
-
-| (Aware of File3.txt in Shared Folder)
+|            My Local Folder            |
+|---------------------------------------|
+| File1.txt                             |
+| File2.txt                             |
+| (Aware of File3.txt in Shared Folder) |
 
 However, git fetch updates your local repository's metadata to know about the new file in the remote repository. This isn't shown in the file explorer but is important for your Git operations.
 
@@ -146,23 +142,21 @@ Local and Remote Branches
 Remote Repository:
 
 
-
-+--------------------------+
 | Remote Repository        |
 |--------------------------|
 | main                     |
 | feature/new-feature      |
-+--------------------------+
+
 Local Repository:
 
 
 
-+--------------------------+
+
 | Local Repository         |
 |--------------------------|
 | main                     |
 | feature/new-feature      |
-+--------------------------+
+
 Each branch is like a different version of your project. You can switch between them, and they might contain different files or versions of files.
 
 Putting It All Together
