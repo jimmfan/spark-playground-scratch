@@ -45,7 +45,6 @@ Imagine two Windows Explorer windows side by side:
 
 Left Window (Shared Folder - Remote Repository):
 
-+-----------------+
 | Shared Folder   |
 |-----------------|
 | File1.txt       |
@@ -54,56 +53,55 @@ Left Window (Shared Folder - Remote Repository):
 Right Window (My PC - Local Repository):
 
 
-+-----------------+
 | My Local Folder |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
-+-----------------+
+
 After running git pull, the right window (local folder) updates to match the left window (shared folder):
 
 Right Window (My PC - Local Repository):
 
-+-----------------+
+
 | My Local Folder |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
 | File3.txt       | <- Newly pulled file
-+-----------------+
+
 git push
 Again, imagine two Windows Explorer windows side by side:
 
 Left Window (Shared Folder - Remote Repository):
 
 
-+-----------------+
+
 | Shared Folder   |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
-+-----------------+
+
 Right Window (My PC - Local Repository):
 
 
-+-----------------+
+
 | My Local Folder |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
 | File3.txt       | <- New file I added
-+-----------------+
+
 After running git push, the left window (shared folder) updates to match the right window (local folder):
 
 Left Window (Shared Folder - Remote Repository):
 
-+-----------------+
+
 | Shared Folder   |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
 | File3.txt       | <- Newly pushed file
-+-----------------+
+
 git fetch
 Imagine the same two Windows Explorer windows:
 
@@ -113,34 +111,34 @@ Imagine you have two Windows Explorer windows:
 Left Window (Shared Folder - Remote Repository):
 
 
-+-----------------+
+
 | Shared Folder   |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
 | File3.txt       | <- New file added by a team member
-+-----------------+
+
 Right Window (My PC - Local Repository Before Fetch):
 
 
-+-----------------+
+
 | My Local Folder |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
-+-----------------+
+
 After running git fetch, it's like your local folder has an internal note about the new file in the shared folder:
 
 Right Window (My PC - Local Repository After Fetch):
 
-+-----------------+
+
 | My Local Folder |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
-+-----------------+
+
 | (Aware of File3.txt in Shared Folder)
-+-----------------+
+
 However, git fetch updates your local repository's metadata to know about the new file in the remote repository. This isn't shown in the file explorer but is important for your Git operations.
 
 Additional Visuals for Branches
