@@ -39,10 +39,6 @@ Local Branch: Your personal workspace where you can make changes without affecti
 Remote Branch: The shared workspace where everyone's changes are stored. Like a shared folder on a network drive.
 
 
-
-
-Certainly! I'll describe simple visuals for each Git command using text. Imagine these as representations of Windows Explorer windows.
-
 Visuals for Git Commands
 git pull
 Imagine two Windows Explorer windows side by side:
@@ -55,7 +51,6 @@ Left Window (Shared Folder - Remote Repository):
 | File1.txt       |
 | File2.txt       |
 | File3.txt       | <- New file added by a team member
-+-----------------+
 Right Window (My PC - Local Repository):
 
 
