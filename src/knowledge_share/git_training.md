@@ -30,7 +30,6 @@ Commands Overview
 
 ### git pull: Updates your local branch with changes from the remote branch.
 Analogy: You check the shared folder for any updates your team members have added, and you copy those updates to your local folder.
-Example: git pull origin maingit pull
 Imagine two Windows Explorer windows side by side:
 
 Left Window (Shared Folder - Remote Repository):
@@ -40,8 +39,8 @@ Left Window (Shared Folder - Remote Repository):
 | File1.txt       |
 | File2.txt       |
 | File3.txt       | <- New file added by a team member
-Right Window (My PC - Local Repository):
 
+Right Window (My PC - Local Repository):
 
 | My Local Folder |
 |-----------------|
@@ -69,14 +68,12 @@ Again, imagine two Windows Explorer windows side by side:
 
 Left Window (Shared Folder - Remote Repository):
 
-
 | Shared Folder   |
 |-----------------|
 | File1.txt       |
 | File2.txt       |
 
 Right Window (My PC - Local Repository):
-
 
 | My Local Folder |
 |-----------------|
@@ -87,7 +84,6 @@ Right Window (My PC - Local Repository):
 After running git push, the left window (shared folder) updates to match the right window (local folder):
 
 Left Window (Shared Folder - Remote Repository):
-
 
 | Shared Folder   |
 |-----------------|
@@ -108,8 +104,6 @@ Visual for git fetch as a Folder Refresh
 Imagine you have two Windows Explorer windows:
 
 Left Window (Shared Folder - Remote Repository):
-
-
 
 | Shared Folder   |
 |-----------------|
