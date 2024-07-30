@@ -1,46 +1,36 @@
 Git Training Session: Understanding Pull, Push, Fetch, and Branches
+
 Introduction
+
 Welcome to our Git training session! Today, we'll demystify some fundamental Git concepts: git pull, git push, git fetch, and the differences between local and remote branches. To make things easier, we'll use the analogy of a shared folder (remote repository) and your local PC (local repository).
+
 
 The Basics of Git
 Before diving into specific commands, let's recap what Git is:
 
 Git: A version control system to track changes in your code.
-Repository: A storage location for your code.
-Local Repository: The copy of the repository on your local machine.
-Remote Repository: The copy of the repository on a server (like GitHub, GitLab, etc.).
-Understanding Branches
-Local Branch: This is like a personal workspace on your PC where you make changes.
-Remote Branch: This is like a shared folder on a server where everyone shares their changes.
-Commands Overview
-git pull: Updates your local branch with changes from the remote branch.
-git push: Sends your local changes to the remote branch.
-git fetch: Gets the latest changes from the remote branch but doesn’t merge them into your local branch.
-Using the Shared Folder Analogy
-Imagine you and your team are working on a project. There's a shared folder on a network drive that everyone can access. You have your own copy of this folder on your PC.
 
-git pull - Getting Updates
-Analogy: You check the shared folder for any updates your team members have added, and you copy those updates to your local folder.
-Command: git pull
-This command combines git fetch and git merge. It fetches changes from the remote branch and merges them into your local branch.
-Example: git pull origin main
-git push - Sharing Your Changes
-Analogy: You’ve made some changes in your local folder and now you want to share them with the team by updating the shared folder.
-Command: git push
-This command sends your local changes to the remote branch.
-Example: git push origin main
-git fetch - Checking for Updates
-Analogy: You look at the shared folder to see if there are any updates without actually copying them to your local folder yet.
-Command: git fetch
-This command retrieves changes from the remote branch but does not merge them into your local branch.
-Example: git fetch origin
-Differences Between Local and Remote Branches
+Repository: A storage location for your code.
+
+Local Repository: The copy of the repository on your local machine.
+
+Remote Repository: The copy of the repository on a server (like GitHub, GitLab, etc.).
+
+## Differences Between Local and Remote Branches
 Local Branch: Your personal workspace where you can make changes without affecting others. Like a folder on your PC.
 Remote Branch: The shared workspace where everyone's changes are stored. Like a shared folder on a network drive.
 
+Understanding Branches
+Local Branch: This is like a personal workspace on your PC where you make changes.
 
-Visuals for Git Commands
-git pull
+Remote Branch: This is like a shared folder on a server where everyone shares their changes.
+
+Commands Overview
+
+
+### git pull: Updates your local branch with changes from the remote branch.
+Analogy: You check the shared folder for any updates your team members have added, and you copy those updates to your local folder.
+Example: git pull origin maingit pull
 Imagine two Windows Explorer windows side by side:
 
 Left Window (Shared Folder - Remote Repository):
@@ -69,7 +59,12 @@ Right Window (My PC - Local Repository):
 | File2.txt       |
 | File3.txt       | <- Newly pulled file
 
-git push
+
+
+### git push: Sends your local changes to the remote branch. AKA Sharing Your Changes
+Analogy: You’ve made some changes in your local folder and now you want to share them with the team by updating the shared folder.
+Example: git push origin main
+
 Again, imagine two Windows Explorer windows side by side:
 
 Left Window (Shared Folder - Remote Repository):
@@ -99,6 +94,12 @@ Left Window (Shared Folder - Remote Repository):
 | File1.txt       |
 | File2.txt       |
 | File3.txt       | <- Newly pushed file
+
+
+### git fetch: Gets the latest changes from the remote branch but doesn’t merge them into your local branch. AKA Checking for Updates
+Analogy: Similar to refreshing a Windows folder to see what new files have been added, but without actually opening or copying those files into your folder. It updates your view of the remote repository without altering your local files.
+Example: git fetch origin
+
 
 git fetch
 Imagine the same two Windows Explorer windows:
@@ -136,6 +137,14 @@ Right Window (My PC - Local Repository After Fetch):
 | (Aware of File3.txt in Shared Folder) |
 
 However, git fetch updates your local repository's metadata to know about the new file in the remote repository. This isn't shown in the file explorer but is important for your Git operations.
+
+
+
+Visuals for Git Commands
+
+
+
+
 
 Additional Visuals for Branches
 Local and Remote Branches
