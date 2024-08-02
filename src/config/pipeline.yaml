@@ -1,0 +1,45 @@
+tables:
+  - name: output_table_1
+    columns:
+      - name: column1
+        type: string
+      - name: column2
+        type: integer
+    description: "Description of output_table_1"
+  - name: output_table_2
+    columns:
+      - name: column1
+        type: date
+      - name: column2
+        type: float
+    description: "Description of output_table_2"
+
+pipeline:
+  steps:
+    - name: step_1
+      directory: "/path/to/sql_files/step_1"
+      sql_file: "step_1.sql"
+      variables:
+        last_month_start:
+          placeholder: "{last_month_start}"
+          logic: "date_trunc('month', current_date) - interval '1 month'"
+        last_month_end:
+          placeholder: "{last_month_end}"
+          logic: "date_trunc('month', current_date) - interval '1 day'"
+    - name: step_2
+      directory: "/path/to/sql_files/step_2"
+      sql_file: "step_2.sql"
+      variables:
+        last_month_start:
+          placeholder: "{last_month_start}"
+          logic: "date_trunc('month', current_date) - interval '1 month'"
+        last_month_end:
+          placeholder: "{last_month_end}"
+          logic: "date_trunc('month', current_date) - interval '1 day'"
+        months_look_back:
+          placeholder: "{months_look_back}"
+          logic: "date_trunc('month', current_date) - interval '6 months'"
+
+settings:
+  environment: "production"
+  database: "my_database"
