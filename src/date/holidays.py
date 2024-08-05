@@ -1,6 +1,6 @@
 import pandas as pd
-from pandas.tseries.offsets import BMonthEnd, BMonthBegin
 import holidays
+from pandas.tseries.offsets import CustomBusinessDay
 
 def get_business_day(date_type: str) -> pd.Timestamp:
     """
@@ -16,19 +16,17 @@ def get_business_day(date_type: str) -> pd.Timestamp:
         raise ValueError("date_type must be 'first_business_day' or 'last_business_day'")
     
     us_holidays = holidays.US()
+    custom_bday = CustomBusinessDay(holidays=us_holidays)
     today = pd.Timestamp.today()
     
     if date_type == "first_business_day":
-        first_bd = today + BMonthBegin(n=0)
-        while first_bd in us_holidays or first_bd.weekday() >= 5:
-            first_bd += pd.DateOffset(days=1)
-        return first_bd
+        first_day = today.replace(day=1)
+        first_bd = pd.date_range(start=first_day, periods=1, freq=custom_bday)[0]
+    else:  # date_type == "last_business_day"
+        last_day = today + pd.offsets.MonthEnd()
+        last_bd = pd.date_range(end=last_day, periods=1, freq=custom_bday)[-1]
     
-    elif date_type == "last_business_day":
-        last_bd = today + BMonthEnd(n=0)
-        while last_bd in us_holidays or last_bd.weekday() >= 5:
-            last_bd -= pd.DateOffset(days=1)
-        return last_bd
+    return first_bd if date_type == "first_business_day" else last_bd
 
 # Example usage:
 print(get_business_day("first_business_day"))
