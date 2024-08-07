@@ -28,6 +28,12 @@ def get_business_day(date_type: str) -> pd.Timestamp:
     
     return first_bd if date_type == "first_business_day" else last_bd
 
+# Function to display the US holidays used
+def display_us_holidays(year: int):
+    us_holidays = holidays.US(years=year)
+    for date, name in sorted(us_holidays.items()):
+        print(f"{date}: {name}")
+
 # Example usage:
 print(get_business_day("first_business_day"))
 print(get_business_day("last_business_day"))
