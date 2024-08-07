@@ -33,3 +33,36 @@ schema = StructType([
     StructField(column_names[i], get_column_type(data, i), True)
     for i in range(len(column_names))
 ])
+
+# Function to convert a value to the inferred Spark SQL data type
+def convert_value(value, data_type):
+    if value is None:
+        return None
+    try:
+        if isinstance(data_type, IntegerType):
+            return int(value)
+        elif isinstance(data_type, DoubleType):
+            return float(value)
+        elif isinstance(data_type, StringType):
+            return str(value)
+        elif isinstance(data_type, BooleanType):
+            return bool(value)
+        elif isinstance(data_type, TimestampType):
+            if isinstance(value, datetime.datetime):
+                return value
+            else:
+                return datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        else:
+            return str(value)
+    except (ValueError, TypeError):
+        return None
+
+# Preprocess the data to match the inferred schema
+processed_data = [
+    tuple(convert_value(row[i], schema[i].dataType) for i in range(len(row)))
+    for row in data
+]
+
+# Create DataFrame
+df = spark.createDataFrame(processed_data, schema)
+
