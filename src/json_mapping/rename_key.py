@@ -10,8 +10,9 @@ df = df.withColumn("json_map", F.from_json("json_col", MapType(StringType(), Str
 
 # Rename the key by creating a new key-value pair and dropping the old one
 df = df.withColumn("json_map", 
-    F.expr("json_map || map('newKey', json_map['oldKey'])").dropFields("oldKey")
-)
+                   F.create_map(F.lit('newKey'), F.col('json_map')['oldKey'])
+                   .alias("newKey") 
+                   .withField("anotherKey", F.col("json_map")["anotherKey"]))
 
 # Convert the map back to a JSON string
 df = df.withColumn("json_col", F.to_json("json_map"))
