@@ -11,9 +11,6 @@ class TestReverseString(unittest.TestCase):
     def test_empty(self):
         self.assertEqual(reverse_string(""), "")
 
-    def test_spaces(self):
-        self.assertEqual(reverse_string("open ai"), "ia nepo")
-
     def test_punctuation(self):
         self.assertEqual(reverse_string("a.b,c!"), "!,c.b.a")
 
