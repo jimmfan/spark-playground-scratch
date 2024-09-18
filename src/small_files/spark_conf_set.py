@@ -19,28 +19,28 @@ spark = SparkSession.builder \
 # spark.conf.set("dfs.block.size", "268435456")  # 256MB
 
 
-# Set Hive and Hadoop configurations to handle small files
+# Set Hive configurations to handle small files (use spark.sql for Hive settings)
 spark.sql("SET hive.merge.mapfiles=true")
 spark.sql("SET hive.merge.mapredfiles=true")
 spark.sql("SET hive.merge.smallfiles.avgsize=134217728")  # 128 MB
 spark.sql("SET hive.merge.size.per.task=268435456")  # 256 MB
 
-# Compression and block size settings
-spark.conf.set("hive.exec.compress.output", "true")  # Compress final output
+# Compression and block size settings (use spark.conf.set for Spark settings)
+spark.conf.set("hive.exec.compress.output", "true")  # Compress final output in Hive
 spark.conf.set("parquet.compression", "snappy")  # Use Snappy compression for Parquet files
 spark.conf.set("parquet.block.size", "268435456")  # Set Parquet block size to 256 MB
 spark.conf.set("dfs.block.size", "268435456")  # Set HDFS block size to 256 MB
 
-# Enable parallel execution in Hive
-spark.conf.set("hive.exec.parallel", "true")  # Parallelize tasks in Hive
+# Enable parallel execution in Hive (use spark.sql for Hive settings)
+spark.sql("SET hive.exec.parallel=true")  # Parallelize tasks in Hive
 
-# Optimize dynamic partitioning to reduce small file creation
-spark.conf.set("hive.optimize.sort.dynamic.partition", "true")
+# Optimize dynamic partitioning to reduce small file creation (use spark.sql for Hive settings)
+spark.sql("SET hive.optimize.sort.dynamic.partition=true")
 
-# Enable Adaptive Query Execution (AQE) for dynamic query optimization
+# Enable Adaptive Query Execution (AQE) for dynamic query optimization (use spark.conf.set for Spark settings)
 spark.conf.set("spark.sql.adaptive.enabled", "true")
 
-# Control the number of records per file to avoid too many small files
+# Control the number of records per file to avoid too many small files (use spark.conf.set for Spark settings)
 spark.conf.set("spark.sql.files.maxRecordsPerFile", 1000000)
 
 # Read the existing Hive table
