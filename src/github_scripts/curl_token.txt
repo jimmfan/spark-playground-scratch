@@ -1,0 +1,11 @@
+curl -u "USERNAME" -X POST https://api.github.com/authorizations \
+-d '{
+  "scopes": [
+    "repo",
+    "workflow",
+    "actions",
+    "metadata",
+    "read:org"
+  ],
+  "note": "My Token with Specific Permissions"
+}'
