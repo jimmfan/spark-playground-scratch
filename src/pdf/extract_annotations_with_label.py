@@ -44,13 +44,15 @@ def extract_and_map_labels_to_rectangles(pdf_bytes):
                 for label, label_rect in labels_for_this_rectangle:
                     label_text = label.info.get("content", "No Label Content")
 
-                    mapped_labels.append({
-                        "label": label_text,
-                        "text_inside_rect": text_inside_rect,
-                        "page_number": page_number
-                    })
+                    # Ensure the label text is not from another FreeText (label) annotation
+                    if label_text not in [lbl.info.get("content", "") for lbl, _ in labels]:
+                        mapped_labels.append({
+                            "label": label_text,
+                            "text_inside_rect": text_inside_rect,
+                            "page_number": page_number
+                        })
 
-                    print(f"Label: '{label_text}' mapped to Text: '{text_inside_rect}' on Page {page_number}")
+                        print(f"Label: '{label_text}' mapped to Text: '{text_inside_rect}' on Page {page_number}")
     
     doc.close()
     return mapped_labels
