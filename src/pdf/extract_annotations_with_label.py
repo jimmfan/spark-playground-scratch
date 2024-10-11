@@ -14,7 +14,6 @@ def extract_and_map_labels_to_rectangles(pdf_bytes):
         # Lists to store FreeText (labels) and Rectangle annotations
         labels = []
         rectangles = []
-        assigned_rectangles = set()  # To track rectangles already assigned to labels
         
         # Iterate through all annotations on the page
         for annot in page.annots():
@@ -25,42 +24,33 @@ def extract_and_map_labels_to_rectangles(pdf_bytes):
             elif annot_type == 4:  # Square/Rectangle
                 rectangles.append((annot, annot.rect))
         
-        # For each label, find the closest rectangle
-        for label, label_rect in labels:
-            closest_rectangle = None
-            min_distance = float('inf')
+        # For each rectangle, find all FreeText labels that are close to it
+        for rectangle, rect in rectangles:
+            # List to store all labels that will map to this rectangle
+            labels_for_this_rectangle = []
+            
+            for label, label_rect in labels:
+                # Check if the label is horizontally or vertically aligned with the rectangle
+                if (abs(label_rect.y0 - rect.y0) <= 10 or abs(label_rect.y1 - rect.y1) <= 10 or
+                    abs(label_rect.x0 - rect.x0) <= 10 or abs(label_rect.x1 - rect.x1) <= 10):
+                    
+                    # If aligned, add it to the list for this rectangle
+                    labels_for_this_rectangle.append((label, label_rect))
+            
+            # If there are labels mapped to this rectangle, extract the text and associate them
+            if labels_for_this_rectangle:
+                text_inside_rect = page.get_text("text", clip=rect).strip()
 
-            for rect_index, (rectangle, rect) in enumerate(rectangles):
-                # Skip rectangles that have already been assigned, but allow multiple labels if needed
-                if rect_index in assigned_rectangles:
-                    continue
-                
-                # Calculate the center-to-center distance between the label and the rectangle
-                label_center = (label_rect.x0 + label_rect.x1) / 2, (label_rect.y0 + label_rect.y1) / 2
-                rect_center = (rect.x0 + rect.x1) / 2, (rect.y0 + rect.y1) / 2
-                distance = ((label_center[0] - rect_center[0]) ** 2 + (label_center[1] - rect_center[1]) ** 2) ** 0.5
-                
-                # Update the closest rectangle if the current one is closer
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_rectangle = (rect_index, rect)
+                for label, label_rect in labels_for_this_rectangle:
+                    label_text = label.info.get("content", "No Label Content")
 
-            if closest_rectangle:
-                rect_index, closest_rect = closest_rectangle
-                # Assign the rectangle to the label (mark it as assigned)
-                assigned_rectangles.add(rect_index)
+                    mapped_labels.append({
+                        "label": label_text,
+                        "text_inside_rect": text_inside_rect,
+                        "page_number": page_number
+                    })
 
-                # Extract text from the closest rectangle
-                text_inside_rect = page.get_text("text", clip=closest_rect).strip()
-                label_text = label.info.get("content", "No Label Content")
-
-                mapped_labels.append({
-                    "label": label_text,
-                    "text_inside_rect": text_inside_rect,
-                    "page_number": page_number
-                })
-
-                print(f"Label: '{label_text}' mapped to Text: '{text_inside_rect}' on Page {page_number}")
+                    print(f"Label: '{label_text}' mapped to Text: '{text_inside_rect}' on Page {page_number}")
     
     doc.close()
     return mapped_labels
