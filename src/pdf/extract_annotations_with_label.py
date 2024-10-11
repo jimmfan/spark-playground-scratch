@@ -1,6 +1,6 @@
 import fitz  # PyMuPDF
 
-def extract_and_map_labels_to_rectangles(pdf_bytes):
+def extract_and_map_labels_to_closest_rectangles(pdf_bytes):
     # Open the PDF from the byte array
     doc = fitz.open("pdf", pdf_bytes)
     
@@ -11,7 +11,7 @@ def extract_and_map_labels_to_rectangles(pdf_bytes):
     for page_number in range(len(doc)):
         page = doc[page_number]
         
-        # Lists to store FreeText (labels) and Rectangle annotations separately
+        # Lists to store FreeText (labels) and Rectangle annotations
         labels = []
         rectangles = []
         
@@ -24,27 +24,29 @@ def extract_and_map_labels_to_rectangles(pdf_bytes):
             elif annot_type == 4:  # Square/Rectangle
                 rectangles.append((annot, annot.rect))
         
-        # For each label, find the closest rectangle
+        # Map each label to the closest rectangle
         for label, label_rect in labels:
             closest_rectangle = None
             min_distance = float('inf')
+            text_inside_rect = ""
 
+            # Find the closest rectangle for each label
             for rectangle, rect in rectangles:
                 # Calculate the center-to-center distance between the label and the rectangle
-                label_center = ((label_rect.x0 + label_rect.x1) / 2, (label_rect.y0 + label_rect.y1) / 2)
-                rect_center = ((rect.x0 + rect.x1) / 2, (rect.y0 + rect.y1) / 2)
+                label_center = (label_rect.x0 + label_rect.x1) / 2, (label_rect.y0 + label_rect.y1) / 2
+                rect_center = (rect.x0 + rect.x1) / 2, (rect.y0 + rect.y1) / 2
                 distance = ((label_center[0] - rect_center[0]) ** 2 + (label_center[1] - rect_center[1]) ** 2) ** 0.5
-
+                
+                # Update the closest rectangle if the current one is closer
                 if distance < min_distance:
                     min_distance = distance
                     closest_rectangle = rect
 
-            # If a closest rectangle is found, extract the text and associate it
             if closest_rectangle:
+                # Extract text from the closest rectangle
                 text_inside_rect = page.get_text("text", clip=closest_rectangle).strip()
                 label_text = label.info.get("content", "No Label Content")
 
-                # Map each label to the closest rectangle's text
                 mapped_labels.append({
                     "label": label_text,
                     "text_inside_rect": text_inside_rect,
@@ -60,4 +62,4 @@ def extract_and_map_labels_to_rectangles(pdf_bytes):
 with open("doc.pdf", "rb") as file:
     pdf_bytes = file.read()
 
-mapped_labels = extract_and_map_labels_to_rectangles(pdf_bytes)
+mapped_labels = extract_and_map_labels_to_closest_rectangles(pdf_bytes)
