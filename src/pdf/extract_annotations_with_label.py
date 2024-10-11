@@ -33,15 +33,21 @@ def extract_and_map_text_with_labels(pdf_bytes):
                     word_rect = fitz.Rect(x0, y0, x1, y1)
                     
                     # Check if the word is close horizontally or vertically to the annotation rectangle
-                    if (word_rect.y1 <= annot_rect.y1 + 10 and word_rect.y0 >= annot_rect.y0 - 10) or \
-                       (word_rect.x1 <= annot_rect.x1 + 10 and word_rect.x0 >= annot_rect.x0 - 10):
+                    if (abs(word_rect.y0 - annot_rect.y0) <= 10 or abs(word_rect.y1 - annot_rect.y1) <= 10 or
+                        abs(word_rect.x0 - annot_rect.x0) <= 10 or abs(word_rect.x1 - annot_rect.x1) <= 10):
                         # Add the nearby word as a possible label
                         possible_labels.append((word_text, word_rect))
                 
                 # Choose the closest label based on distance
                 if possible_labels:
-                    # Sort labels by proximity to the annotation rectangle
-                    closest_label = min(possible_labels, key=lambda label: annot_rect.distance_to(label[1]))
+                    # Calculate distances and find the closest label
+                    closest_label = min(
+                        possible_labels,
+                        key=lambda label: min(
+                            abs(label[1].x0 - annot_rect.x0), abs(label[1].x1 - annot_rect.x1),
+                            abs(label[1].y0 - annot_rect.y0), abs(label[1].y1 - annot_rect.y1)
+                        )
+                    )
                     mapped_labels.append({
                         "label": closest_label[0],
                         "text_inside_rect": text_inside_rect,
@@ -53,7 +59,7 @@ def extract_and_map_text_with_labels(pdf_bytes):
     return mapped_labels
 
 # Example usage
-with open("financial_document.pdf", "rb") as file:
+with open("doc.pdf", "rb") as file:
     pdf_bytes = file.read()
 
 mapped_labels = extract_and_map_text_with_labels(pdf_bytes)
