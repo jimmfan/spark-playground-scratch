@@ -1,67 +1,59 @@
 import fitz  # PyMuPDF
 
-def extract_text_and_map_labels(pdf_bytes):
+def extract_and_map_text_with_labels(pdf_bytes):
     # Open the PDF from the byte array
     doc = fitz.open("pdf", pdf_bytes)
     
-    # Dictionary to store rectangle text mapped to label text
-    annotation_map = {}
+    # Dictionary to store the mapped labels and texts
+    mapped_labels = []
 
     # Iterate over each page
     for page_number in range(len(doc)):
         page = doc[page_number]
         
-        # Extract all text on the page and split into words with their bounding boxes
-        words = page.get_text("words")  # returns (x0, y0, x1, y1, "word", block_no, line_no, word_no)
-        
         # Iterate through all annotations on the page
         for annot in page.annots():
             annot_type = annot.type[0]
-            # Check if the annotation is a square or rectangle (type 4: Square)
-            if annot_type == 4:  # 'Square'
+            
+            # Check if the annotation is a FreeText (value 2)
+            if annot_type == 2:
                 # Get the rectangle of the annotation
                 annot_rect = annot.rect
                 
-                # Extract the text within this rectangle
-                inside_text = page.get_text("text", clip=annot_rect).strip()
+                # Extract the text within the annotation rectangle
+                text_inside_rect = page.get_text("text", clip=annot_rect).strip()
                 
-                # Find potential label text outside the rectangle, horizontally or vertically aligned
-                label_text = None
-                min_distance = float('inf')  # To find the closest label
+                # Find nearby text that might serve as a label
+                words = page.get_text("words")  # Get all words on the page
+                possible_labels = []
                 
+                # Iterate through all words to find nearby labels
                 for word in words:
-                    word_rect = fitz.Rect(word[0], word[1], word[2], word[3])
-                    word_text = word[4]
+                    x0, y0, x1, y1, word_text = word[:5]
+                    word_rect = fitz.Rect(x0, y0, x1, y1)
                     
-                    # Check horizontal alignment (same y-axis range, next to the rectangle)
-                    if annot_rect.y0 <= word_rect.y0 <= annot_rect.y1 or annot_rect.y0 <= word_rect.y1 <= annot_rect.y1:
-                        # If the label is on the left or right of the rectangle
-                        if word_rect.x1 < annot_rect.x0 or word_rect.x0 > annot_rect.x1:
-                            distance = min(abs(word_rect.x1 - annot_rect.x0), abs(word_rect.x0 - annot_rect.x1))
-                            if distance < min_distance:
-                                min_distance = distance
-                                label_text = word_text
-
-                    # Check vertical alignment (same x-axis range, above or below the rectangle)
-                    if annot_rect.x0 <= word_rect.x0 <= annot_rect.x1 or annot_rect.x0 <= word_rect.x1 <= annot_rect.x1:
-                        # If the label is above or below the rectangle
-                        if word_rect.y1 < annot_rect.y0 or word_rect.y0 > annot_rect.y1:
-                            distance = min(abs(word_rect.y1 - annot_rect.y0), abs(word_rect.y0 - annot_rect.y1))
-                            if distance < min_distance:
-                                min_distance = distance
-                                label_text = word_text
-
-                # Store the annotation text and its associated label
-                if inside_text and label_text:
-                    annotation_map[label_text] = inside_text
-                    print(f"Page {page_number}: Label '{label_text}' mapped to text inside rectangle: '{inside_text}'")
-
+                    # Check if the word is close horizontally or vertically to the annotation rectangle
+                    if (word_rect.y1 <= annot_rect.y1 + 10 and word_rect.y0 >= annot_rect.y0 - 10) or \
+                       (word_rect.x1 <= annot_rect.x1 + 10 and word_rect.x0 >= annot_rect.x0 - 10):
+                        # Add the nearby word as a possible label
+                        possible_labels.append((word_text, word_rect))
+                
+                # Choose the closest label based on distance
+                if possible_labels:
+                    # Sort labels by proximity to the annotation rectangle
+                    closest_label = min(possible_labels, key=lambda label: annot_rect.distance_to(label[1]))
+                    mapped_labels.append({
+                        "label": closest_label[0],
+                        "text_inside_rect": text_inside_rect,
+                        "page_number": page_number
+                    })
+                    print(f"Mapped Label: '{closest_label[0]}' with Text: '{text_inside_rect}' on Page {page_number}")
+    
     doc.close()
-    return annotation_map
+    return mapped_labels
 
 # Example usage
 with open("financial_document.pdf", "rb") as file:
     pdf_bytes = file.read()
 
-annotation_map = extract_text_and_map_labels(pdf_bytes)
-print("Annotation Map:", annotation_map)
+mapped_labels = extract_and_map_text_with_labels(pdf_bytes)
