@@ -11,7 +11,7 @@ def extract_and_map_labels_to_rectangles(pdf_bytes):
     for page_number in range(len(doc)):
         page = doc[page_number]
         
-        # Lists to store FreeText (labels) and Rectangle annotations
+        # Lists to store FreeText (labels) and Rectangle annotations separately
         labels = []
         rectangles = []
         
@@ -22,7 +22,9 @@ def extract_and_map_labels_to_rectangles(pdf_bytes):
             if annot_type == 2:  # FreeText (label)
                 labels.append((annot, annot.rect))
             elif annot_type == 4:  # Square/Rectangle
-                rectangles.append((annot, annot.rect))
+                # Only append if it doesn't overlap with any label annotations
+                if not any(annot.rect.intersects(label_rect) for _, label_rect in labels):
+                    rectangles.append((annot, annot.rect))
         
         # For each rectangle, find all FreeText labels that are close to it
         for rectangle, rect in rectangles:
@@ -39,6 +41,7 @@ def extract_and_map_labels_to_rectangles(pdf_bytes):
             
             # If there are labels mapped to this rectangle, extract the text and associate them
             if labels_for_this_rectangle:
+                # Extract the text from inside the rectangle itself
                 text_inside_rect = page.get_text("text", clip=rect).strip()
 
                 for label, label_rect in labels_for_this_rectangle:
