@@ -6,22 +6,37 @@ import io
 
 def deskew_image(image):
     image = np.array(image)
-    # Handle RGBA images
     if image.shape[2] == 4:
         image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    gray = cv2.bitwise_not(gray)
-    thresh = cv2.threshold(gray, 0, 255,
-                           cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-    coords = np.column_stack(np.where(thresh > 0))
-    # If no text is found, return the original image
+    gray_inv = cv2.bitwise_not(gray)
+    _, binary = cv2.threshold(gray_inv, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    
+    # Remove horizontal lines
+    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 1))
+    remove_horizontal = cv2.morphologyEx(binary, cv2.MORPH_OPEN, horizontal_kernel, iterations=1)
+
+    # Remove vertical lines
+    vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 40))
+    remove_vertical = cv2.morphologyEx(binary, cv2.MORPH_OPEN, vertical_kernel, iterations=1)
+
+    # Combine masks and subtract from binary image
+    lines = cv2.add(remove_horizontal, remove_vertical)
+    binary_no_lines = cv2.subtract(binary, lines)
+    
+    # Find coordinates of text pixels
+    coords = np.column_stack(np.where(binary_no_lines > 0))
+    
     if len(coords) == 0:
         return Image.fromarray(image)
+    
     angle = cv2.minAreaRect(coords)[-1]
+    
     if angle < -45:
-        angle = -(90 + angle)
+        angle = 90 + angle
     else:
-        angle = -angle
+        angle = angle
+    
     (h, w) = image.shape[:2]
     center = (w // 2, h // 2)
     M = cv2.getRotationMatrix2D(center, angle, 1.0)
@@ -31,24 +46,21 @@ def deskew_image(image):
     return Image.fromarray(rotated)
 
 def main():
-    # Step 1: Read and render PDF pages
     doc = fitz.open('input.pdf')
     images = []
 
     for page_num in range(len(doc)):
         page = doc[page_num]
-        pix = page.get_pixmap()
+        pix = page.get_pixmap(dpi=300)
         mode = "RGB" if pix.alpha == 0 else "RGBA"
         img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
         images.append(img)
 
-    # Step 2: Deskew each image
     deskewed_images = []
     for img in images:
         deskewed_img = deskew_image(img)
         deskewed_images.append(deskewed_img)
 
-    # Step 3: Create a new PDF with deskewed images
     new_doc = fitz.open()
 
     for img in deskewed_images:
@@ -60,7 +72,6 @@ def main():
         page = new_doc.new_page(width=img.width, height=img.height)
         page.insert_image(rect, stream=img_data)
 
-    # Save the new PDF
     new_doc.save('output.pdf')
     new_doc.close()
 
