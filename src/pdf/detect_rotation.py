@@ -5,44 +5,37 @@ import cv2
 import io
 
 def deskew_image(image):
-    image = np.array(image)
-    if image.shape[2] == 4:
-        image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    gray_inv = cv2.bitwise_not(gray)
-    _, binary = cv2.threshold(gray_inv, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    image_cv = np.array(image)
+    if image_cv.shape[2] == 4:
+        image_cv = cv2.cvtColor(image_cv, cv2.COLOR_RGBA2RGB)
+    gray = cv2.cvtColor(image_cv, cv2.COLOR_RGB2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
     
-    # Remove horizontal lines
-    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 1))
-    remove_horizontal = cv2.morphologyEx(binary, cv2.MORPH_OPEN, horizontal_kernel, iterations=1)
-
-    # Remove vertical lines
-    vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 40))
-    remove_vertical = cv2.morphologyEx(binary, cv2.MORPH_OPEN, vertical_kernel, iterations=1)
-
-    # Combine masks and subtract from binary image
-    lines = cv2.add(remove_horizontal, remove_vertical)
-    binary_no_lines = cv2.subtract(binary, lines)
+    if lines is None:
+        return image
     
-    # Find coordinates of text pixels
-    coords = np.column_stack(np.where(binary_no_lines > 0))
+    angles = []
+    for rho, theta in lines[:,0]:
+        angle = np.rad2deg(theta)
+        # Focus on near-horizontal lines (top and bottom margins)
+        if angle < 10 or angle > 170:
+            adjusted_angle = angle if angle <= 90 else angle - 180
+            angles.append(adjusted_angle)
     
-    if len(coords) == 0:
-        return Image.fromarray(image)
+    if not angles:
+        return image
     
-    angle = cv2.minAreaRect(coords)[-1]
+    median_angle = np.median(angles)
     
-    if angle < -45:
-        angle = 90 + angle
-    else:
-        angle = angle
-    
-    (h, w) = image.shape[:2]
+    (h, w) = image_cv.shape[:2]
     center = (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D(center, angle, 1.0)
-    rotated = cv2.warpAffine(image, M, (w, h),
+    M = cv2.getRotationMatrix2D(center, median_angle, 1.0)
+    rotated = cv2.warpAffine(image_cv, M, (w, h),
                              flags=cv2.INTER_CUBIC,
                              borderMode=cv2.BORDER_REPLICATE)
+    rotated = cv2.cvtColor(rotated, cv2.COLOR_BGR2RGB)
     return Image.fromarray(rotated)
 
 def main():
