@@ -8,12 +8,20 @@ sql_table_pattern = re.compile(r'\b(from|join)\s+([a-zA-Z0-9_.]+)\b', re.IGNOREC
 # Regex pattern for PySpark table usage
 pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\'])')
 
+# Function to remove comments from a line
+def remove_comments(line_content):
+    # Remove Python-style comments (#)
+    line_content = re.sub(r'#.*', '', line_content)  # Remove Python-style comments
+    # Remove SQL single-line comments (--)
+    line_content = re.sub(r'--.*', '', line_content)  # Remove SQL single-line comments
+    # Remove SQL multi-line comments (/* ... */)
+    line_content = re.sub(r'/\*.*?\*/', '', line_content, flags=re.DOTALL)  # Remove SQL multi-line comments
+    return line_content
+
 # Function to check for Python import statements and SQL functions using 'from'
 def is_false_positive(line_content):
-    # Remove comments in Python (#) and SQL (-- and /* ... */)
-    line_content = re.sub(r'#.*', '', line_content)  # Remove Python-style comments
-    line_content = re.sub(r'--.*', '', line_content)  # Remove SQL single-line comments
-    line_content = re.sub(r'/\*.*?\*/', '', line_content, flags=re.DOTALL)  # Remove SQL multi-line comments
+    # Remove comments before checking for false positives
+    line_content = remove_comments(line_content)
 
     # Check for Python import statements
     if re.match(r'^\s*from\s+[a-zA-Z0-9_]+\s+import\s', line_content):
@@ -30,12 +38,14 @@ def search_tables_in_file(file_path, repo_url, repo_path):
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
             for line_number, line_content in enumerate(lines, start=1):
+                # Remove comments before processing
+                line_content_cleaned = remove_comments(line_content)
                 # Skip false positives
                 if is_false_positive(line_content):
                     continue
 
                 # Find all SQL table references
-                sql_tables = sql_table_pattern.findall(line_content)
+                sql_tables = sql_table_pattern.findall(line_content_cleaned)
                 for match in sql_tables:
                     table_name = match[1]
                     if table_name not in tables_info:
@@ -47,7 +57,7 @@ def search_tables_in_file(file_path, repo_url, repo_path):
                     tables_info[table_name].append(github_link)
                 
                 # Find all PySpark table references
-                pyspark_tables = pyspark_table_pattern.findall(line_content)
+                pyspark_tables = pyspark_table_pattern.findall(line_content_cleaned)
                 for match in pyspark_tables:
                     table_name = match[1]
                     if table_name not in tables_info:
@@ -115,6 +125,4 @@ all_tables_info = process_repos(repo_urls, base_dir)
 for repo, tables_info in all_tables_info.items():
     print(f"\nTables found in {repo}:")
     for table, links in tables_info.items():
-        print(f"  - {table}:")
-        for link in links:
-            print(f"      * {link}")
+        print(f"  - {
