@@ -7,7 +7,7 @@ sql_table_pattern = re.compile(r'(from|join)\s+([a-zA-Z0-9_.]+)', re.IGNORECASE)
 pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\'])')
 
 # Function to search for table names in a file
-def search_tables_in_file(file_path, repo_url):
+def search_tables_in_file(file_path, repo_url, repo_path):
     tables_info = {}
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -20,7 +20,8 @@ def search_tables_in_file(file_path, repo_url):
                     if table_name not in tables_info:
                         tables_info[table_name] = []
                     # Construct the GitHub link
-                    github_link = f"{repo_url}/blob/main/{os.path.relpath(file_path)}#L{line_number}"
+                    relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
+                    github_link = f"{repo_url}/blob/main/{relative_file_path}#L{line_number}"
                     tables_info[table_name].append(github_link)
                 
                 # Find all PySpark table references
@@ -30,7 +31,7 @@ def search_tables_in_file(file_path, repo_url):
                     if table_name not in tables_info:
                         tables_info[table_name] = []
                     # Construct the GitHub link
-                    github_link = f"{repo_url}/blob/main/{os.path.relpath(file_path)}#L{line_number}"
+                    github_link = f"{repo_url}/blob/main/{relative_file_path}#L{line_number}"
                     tables_info[table_name].append(github_link)
                 
     except Exception as e:
@@ -44,7 +45,7 @@ def search_tables_in_repo(repo_path, repo_url):
         for file in files:
             if file.endswith(('.sql', '.py')):
                 file_path = os.path.join(root, file)
-                tables_info = search_tables_in_file(file_path, repo_url)
+                tables_info = search_tables_in_file(file_path, repo_url, repo_path)
                 for table, links in tables_info.items():
                     if table not in repo_tables_info:
                         repo_tables_info[table] = set()
