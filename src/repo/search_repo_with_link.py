@@ -60,10 +60,15 @@ def search_tables_in_file(file_path, repo_url, repo_path):
         print(f"Error reading {file_path}: {e}")
     return tables_info
 
-# Function to search through a repository
+# Function to search through the src directory of a repository
 def search_tables_in_repo(repo_path, repo_url):
     repo_tables_info = {}
-    for root, dirs, files in os.walk(repo_path):
+    src_path = os.path.join(repo_path, 'src')
+    if not os.path.exists(src_path):
+        print(f"No src directory found in {repo_path}. Skipping...")
+        return repo_tables_info
+
+    for root, dirs, files in os.walk(src_path):
         for file in files:
             if file.endswith(('.sql', '.py')):
                 file_path = os.path.join(root, file)
@@ -90,7 +95,7 @@ def process_repos(repo_urls, base_dir):
             repo = Repo(repo_path)
             repo.remote().pull()
         
-        print(f"Searching tables in {repo_name}...")
+        print(f"Searching tables in the src directory of {repo_name}...")
         tables_info = search_tables_in_repo(repo_path, repo_url)
         all_repo_tables_info[repo_name] = tables_info
     
