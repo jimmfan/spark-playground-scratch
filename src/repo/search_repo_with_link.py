@@ -10,8 +10,13 @@ pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\']
 
 # Function to check for Python import statements and SQL functions using 'from'
 def is_false_positive(line_content):
+    # Remove comments in Python (#) and SQL (-- and /* ... */)
+    line_content = re.sub(r'#.*', '', line_content)  # Remove Python-style comments
+    line_content = re.sub(r'--.*', '', line_content)  # Remove SQL single-line comments
+    line_content = re.sub(r'/\*.*?\*/', '', line_content, flags=re.DOTALL)  # Remove SQL multi-line comments
+
     # Check for Python import statements
-    if re.match(r'\s*from\s+[a-zA-Z0-9_]+\s+import\s', line_content):
+    if re.match(r'^\s*from\s+[a-zA-Z0-9_]+\s+import\s', line_content):
         return True
     # Check for SQL functions using 'from' (e.g., extract(year from timestamp))
     if re.search(r'\bextract\s*\(.+?\bfrom\b', line_content, re.IGNORECASE):
@@ -37,7 +42,8 @@ def search_tables_in_file(file_path, repo_url, repo_path):
                         tables_info[table_name] = []
                     # Construct the GitHub link
                     relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
-                    github_link = f"{repo_url}/blob/main/{relative_file_path}#L{line_number}"
+                    github_repo_url = repo_url.rstrip('.git')
+                    github_link = f"{github_repo_url}/blob/main/{relative_file_path}#L{line_number}"
                     tables_info[table_name].append(github_link)
                 
                 # Find all PySpark table references
@@ -47,7 +53,7 @@ def search_tables_in_file(file_path, repo_url, repo_path):
                     if table_name not in tables_info:
                         tables_info[table_name] = []
                     # Construct the GitHub link
-                    github_link = f"{repo_url}/blob/main/{relative_file_path}#L{line_number}"
+                    github_link = f"{github_repo_url}/blob/main/{relative_file_path}#L{line_number}"
                     tables_info[table_name].append(github_link)
                 
     except Exception as e:
