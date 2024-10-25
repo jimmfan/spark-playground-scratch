@@ -2,9 +2,21 @@ import os
 import re
 from git import Repo
 
-# Define a regex pattern for SQL tables (adjust as needed based on your SQL syntax)
-sql_table_pattern = re.compile(r'(from|join)\s+([a-zA-Z0-9_.]+)', re.IGNORECASE)
+# Refined regex pattern for SQL tables (ignores certain false positives)
+sql_table_pattern = re.compile(r'\b(from|join)\s+([a-zA-Z0-9_.]+)\b', re.IGNORECASE)
+
+# Regex pattern for PySpark table usage
 pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\'])')
+
+# Function to check for Python import statements and SQL functions using 'from'
+def is_false_positive(line_content):
+    # Check for Python import statements
+    if re.match(r'\s*from\s+[a-zA-Z0-9_]+\s+import\s', line_content):
+        return True
+    # Check for SQL functions using 'from' (e.g., extract(year from timestamp))
+    if re.search(r'\bextract\s*\(.+?\bfrom\b', line_content, re.IGNORECASE):
+        return True
+    return False
 
 # Function to search for table names in a file
 def search_tables_in_file(file_path, repo_url, repo_path):
@@ -13,6 +25,10 @@ def search_tables_in_file(file_path, repo_url, repo_path):
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
             for line_number, line_content in enumerate(lines, start=1):
+                # Skip false positives
+                if is_false_positive(line_content):
+                    continue
+
                 # Find all SQL table references
                 sql_tables = sql_table_pattern.findall(line_content)
                 for match in sql_tables:
