@@ -15,7 +15,7 @@ def remove_comments(line_content):
     # Remove SQL single-line comments (--)
     line_content = re.sub(r'--.*', '', line_content)  # Remove SQL single-line comments
     # Remove SQL multi-line comments (/* ... */)
-    line_content = re.sub(r'/\*.*?\*/', '', line_content, flags=re.DOTALL)  # Remove SQL multi-line comments
+    line_content = re.sub(r'/\*.*?\*/', '', line_content)  # Remove SQL multi-line comments
     return line_content
 
 # Function to check for Python import statements and SQL functions using 'from'
@@ -52,7 +52,7 @@ def search_tables_in_file(file_path, repo_url, repo_path):
                         tables_info[table_name] = []
                     # Construct the GitHub link
                     relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
-                    github_repo_url = repo_url.rstrip('.git')
+                    github_repo_url = repo_url.replace(".git", "")
                     github_link = f"{github_repo_url}/blob/main/{relative_file_path}#L{line_number}"
                     tables_info[table_name].append(github_link)
                 
@@ -125,4 +125,7 @@ all_tables_info = process_repos(repo_urls, base_dir)
 for repo, tables_info in all_tables_info.items():
     print(f"\nTables found in {repo}:")
     for table, links in tables_info.items():
-        print(f"  - {
+        print(f"  - {table}:")
+        for link in links:
+            print(f"      * {link}")
+
