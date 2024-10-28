@@ -3,9 +3,10 @@ import re
 import subprocess
 from git import Repo
 
-# Refined regex patterns for SQL and PySpark tables
+# Refined regex patterns for SQL, PySpark tables, and CTEs
 sql_table_pattern = re.compile(r'\b(from|join)\s+([a-zA-Z0-9_.]+)\b', re.IGNORECASE)
 pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\'])')
+cte_pattern = re.compile(r'\bwith\s+([a-zA-Z0-9_]+)\s+as\s*\(', re.IGNORECASE)
 
 # Function to remove comments from a line
 def remove_comments(line_content):
@@ -31,9 +32,12 @@ def get_recent_files(repo_path, since="12 months ago"):
     files = set(line.strip() for line in result.stdout.splitlines() if line.endswith(('.sql', '.py')))
     return sorted(files)
 
-# Function to search for table names in a file with encoding handling
+# Function to search for table names in a file with encoding handling and CTE filtering
 def search_tables_in_file(file_path, repo_url, repo_path):
     tables_info = []
+    cte_aliases = set()
+    
+    # Extract CTE aliases and filter them out of results
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
@@ -45,6 +49,14 @@ def search_tables_in_file(file_path, repo_url, repo_path):
             print(f"Skipping file due to encoding issue: {file_path}")
             return tables_info
 
+    # Identify CTE aliases at the beginning of the file
+    for line_content in lines:
+        line_content_cleaned = remove_comments(line_content)
+        cte_matches = cte_pattern.findall(line_content_cleaned)
+        for alias in cte_matches:
+            cte_aliases.add(alias.lower())  # Store CTE aliases in lowercase to ensure case-insensitive matching
+
+    # Search for tables, excluding CTE aliases
     for line_number, line_content in enumerate(lines, start=1):
         line_content_cleaned = remove_comments(line_content)
         if is_false_positive(line_content):
@@ -53,10 +65,11 @@ def search_tables_in_file(file_path, repo_url, repo_path):
         # Find all SQL table references
         sql_tables = sql_table_pattern.findall(line_content_cleaned)
         for match in sql_tables:
-            table_name = match[1]
-            relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
-            github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
-            tables_info.append({'table': table_name, 'filepath': github_link})
+            table_name = match[1].lower()  # Use lowercase for consistent CTE exclusion
+            if table_name not in cte_aliases:  # Ignore CTE aliases
+                relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
+                github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
+                tables_info.append({'table': table_name, 'filepath': github_link})
         
         # Find all PySpark table references
         pyspark_tables = pyspark_table_pattern.findall(line_content_cleaned)
@@ -98,7 +111,7 @@ def process_repos(repo_urls, base_dir):
         
         print(f"Searching tables in the recently modified files of {repo_name}...")
         tables_info = search_tables_in_recent_files(repo_path, repo_url)
-        all_repo_tables_info = += tables_info
+        all_repo_tables_info += tables_info
     
     return all_repo_tables_info
 
