@@ -10,6 +10,31 @@ cte_pattern = re.compile(r'\bwith\s+([a-zA-Z0-9_]+)\s+as\s*\(', re.IGNORECASE)
 
 # Function to remove comments from a line
 # Function to remove comments from a line or block of text
+
+def manual_remove_comments(line_content):
+    cleaned_text = []
+    in_comment = False
+    i = 0
+    
+    while i < len(line_content):
+        # Check for the start of a comment
+        if not in_comment and line_content[i:i+2] == '/*':
+            in_comment = True
+            i += 2  # Move past '/*'
+        # Check for the end of a comment
+        elif in_comment and line_content[i:i+2] == '*/':
+            in_comment = False
+            i += 2  # Move past '*/'
+        # If we're not in a comment, add the character to the result
+        elif not in_comment:
+            cleaned_text.append(line_content[i])
+            i += 1
+        # If we're inside a comment, skip to the next character
+        else:
+            i += 1
+    
+    return '\n'.join(cleaned_text).strip()
+
 def remove_comments(line_content):
     # Remove Python-style comments (#)
     # r'/\*\s*[\s\S]*?\s*\*/'
