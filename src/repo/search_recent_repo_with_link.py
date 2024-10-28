@@ -11,7 +11,7 @@ pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\']
 def remove_comments(line_content):
     line_content = re.sub(r'#.*', '', line_content)  # Remove Python-style comments
     line_content = re.sub(r'--.*', '', line_content)  # Remove SQL single-line comments
-    line_content = re.sub(r'/\*.*?\*/', '', line_content, flags=re.DOTALL)  # Remove SQL multi-line comments
+    line_content = re.sub(r'/\*.*?\*/', '', line_content)  # Remove SQL multi-line comments
     return line_content
 
 # Function to check for Python import statements and SQL functions using 'from'
@@ -23,9 +23,9 @@ def is_false_positive(line_content):
         return True
     return False
 
-# Function to get files modified in the last 12 months in the 'src/' directory
-def get_recent_files(repo_path, since="12 months ago", directory="src/"):
-    command = ["git", "-C", repo_path, "log", f"--since={since}", "--name-only", "--pretty=format:", "--", directory]
+# Function to get files modified in the last 12 months in the entire repo
+def get_recent_files(repo_path, since="12 months ago"):
+    command = ["git", "-C", repo_path, "log", f"--since={since}", "--name-only", "--pretty=format:"]
     result = subprocess.run(command, capture_output=True, text=True)
     # Filter for .sql and .py files only and remove duplicates
     files = set(line.strip() for line in result.stdout.splitlines() if line.endswith(('.sql', '.py')))
@@ -33,7 +33,7 @@ def get_recent_files(repo_path, since="12 months ago", directory="src/"):
 
 # Function to search for table names in a file
 def search_tables_in_file(file_path, repo_url, repo_path):
-    tables_info = {}
+    tables_info = []
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
@@ -46,36 +46,29 @@ def search_tables_in_file(file_path, repo_url, repo_path):
                 sql_tables = sql_table_pattern.findall(line_content_cleaned)
                 for match in sql_tables:
                     table_name = match[1]
-                    if table_name not in tables_info:
-                        tables_info[table_name] = []
                     relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
                     github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
-                    tables_info[table_name].append(github_link)
+                    tables_info.append({'table': table_name, 'filepath': github_link})
                 
                 # Find all PySpark table references
                 pyspark_tables = pyspark_table_pattern.findall(line_content_cleaned)
                 for match in pyspark_tables:
                     table_name = match[1]
-                    if table_name not in tables_info:
-                        tables_info[table_name] = []
                     github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
-                    tables_info[table_name].append(github_link)
+                    tables_info.append({'table': table_name, 'filepath': github_link})
                 
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
     return tables_info
 
-# Function to search for tables in the recently modified files within the src directory
+# Function to search for tables in the recently modified files in the entire repo
 def search_tables_in_recent_files(repo_path, repo_url):
     recent_files = get_recent_files(repo_path)  # Get files modified in the last 12 months
-    repo_tables_info = {}
+    repo_tables_info = []
     for file in recent_files:
         file_path = os.path.join(repo_path, file)
         tables_info = search_tables_in_file(file_path, repo_url, repo_path)
-        for table, links in tables_info.items():
-            if table not in repo_tables_info:
-                repo_tables_info[table] = set()
-            repo_tables_info[table].update(links)
+        repo_tables_info.extend(tables_info)
     return repo_tables_info
 
 # Function to clone repos and search for tables in recent files
@@ -113,7 +106,5 @@ all_tables_info = process_repos(repo_urls, base_dir)
 # Output results
 for repo, tables_info in all_tables_info.items():
     print(f"\nTables found in {repo}:")
-    for table, links in tables_info.items():
-        print(f"  - {table}:")
-        for link in links:
-            print(f"      * {link}")
+    for entry in tables_info:
+        print(f"  - Table: {entry['table']}, Filepath: {entry['filepath']}")
