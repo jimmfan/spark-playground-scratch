@@ -1,7 +1,5 @@
 import os
 import re
-import subprocess
-
 from git import Repo
 
 # Refined regex pattern for SQL tables (ignores certain false positives)
@@ -32,16 +30,6 @@ def is_false_positive(line_content):
     if re.search(r'\bextract\s*\(.+?\bfrom\b', line_content, re.IGNORECASE):
         return True
     return False
-
-
-# Function to get files modified in the last 12 months in the 'src/' directory
-def get_recent_files(repo_path, since="12 months ago", directory="src/"):
-    command = ["git", "-C", repo_path, "log", f"--since={since}", "--name-only", "--pretty=format:", "--", directory]
-    result = subprocess.run(command, capture_output=True, text=True)
-    # Filter for .sql and .py files only and remove duplicates
-    files = set(line.strip() for line in result.stdout.splitlines() if line.endswith(('.sql', '.py')))
-    return sorted(files)
-
 
 # Function to search for table names in a file
 def search_tables_in_file(file_path, repo_url, repo_path):
@@ -81,18 +69,6 @@ def search_tables_in_file(file_path, repo_url, repo_path):
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
     return tables_info
-
-def search_tables_in_recent_files(repo_path, repo_url):
-    recent_files = get_recent_files(repo_path)  # Get files modified in the last 12 months
-    repo_tables_info = {}
-    for file in recent_files:
-        file_path = os.path.join(repo_path, file)
-        tables_info = search_tables_in_file(file_path, repo_url, repo_path)
-        for table, links in tables_info.items():
-            if table not in repo_tables_info:
-                repo_tables_info[table] = set()
-            repo_tables_info[table].update(links)
-    return repo_tables_info
 
 # Function to search through the src directory of a repository
 def search_tables_in_repo(repo_path, repo_url):
