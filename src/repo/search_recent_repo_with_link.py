@@ -3,38 +3,12 @@ import re
 import subprocess
 from git import Repo
 
-# Refined regex patterns for SQL, PySpark tables, and CTEs
+# Refined regex patterns for SQL and PySpark tables
 sql_table_pattern = re.compile(r'\b(from|join)\s+([a-zA-Z0-9_.]+)\b', re.IGNORECASE)
 pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\'])')
-cte_pattern = re.compile(r'\bwith\s+([a-zA-Z0-9_]+)\s+as\s*\(', re.IGNORECASE)
+
 
 # Function to remove comments from a line
-# Function to remove comments from a line or block of text
-
-def manual_remove_comments(line_content):
-    cleaned_text = []
-    in_comment = False
-    i = 0
-    
-    while i < len(line_content):
-        # Check for the start of a comment
-        if not in_comment and line_content[i:i+2] == '/*':
-            in_comment = True
-            i += 2  # Move past '/*'
-        # Check for the end of a comment
-        elif in_comment and line_content[i:i+2] == '*/':
-            in_comment = False
-            i += 2  # Move past '*/'
-        # If we're not in a comment, add the character to the result
-        elif not in_comment:
-            cleaned_text.append(line_content[i])
-            i += 1
-        # If we're inside a comment, skip to the next character
-        else:
-            i += 1
-    
-    return '\n'.join(cleaned_text).strip()
-
 def remove_comments(line_content):
     # Remove Python-style comments (#)
     # r'/\*\s*[\s\S]*?\s*\*/'
@@ -45,12 +19,30 @@ def remove_comments(line_content):
     line_content = re.sub(r'/\*[\s\S]*?\*/', '', line_content)  # Remove SQL multi-line comments
     return line_content
 
+
+# Function to remove comments from the content
+def remove_comments(content):
+    # Remove all multi-line comments (/* ... */)
+    content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+    # Remove single-line comments (-- and #)
+    content = re.sub(r'--.*', '', content)
+    content = re.sub(r'#.*', '', content)
+    return content
+
+# Function to extract CTE aliases from the content
+def extract_cte_aliases(content):
+    cte_aliases = set()
+    # Regex pattern to find CTE aliases
+    cte_alias_pattern = re.compile(r'(?:(?:with|,)\s*)([a-zA-Z0-9_]+)\s+as\s*\(', re.IGNORECASE)
+    matches = cte_alias_pattern.findall(content)
+    cte_aliases.update(matches)
+    return cte_aliases
+
 # Function to check for Python import statements and SQL functions using 'from'
-def is_false_positive(line_content_cleaned):
-    # Directly using the cleaned line content
-    if re.match(r'^\s*from\s+[a-zA-Z0-9_]+\s+import\s', line_content_cleaned):
+def is_false_positive(line_content):
+    if re.match(r'^\s*from\s+[a-zA-Z0-9_]+\s+import\s', line_content):
         return True
-    if re.search(r'\bextract\s*\(.+?\bfrom\b', line_content_cleaned, re.IGNORECASE):
+    if re.search(r'\bextract\s*\(.+?\bfrom\b', line_content, re.IGNORECASE):
         return True
     return False
 
@@ -76,13 +68,13 @@ def search_tables_in_file(file_path, repo_url, repo_path):
             print(f"Skipping file due to encoding issue: {file_path}")
             return tables_info
 
-    # Remove multi-line comments
-    content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)  # Remove SQL multi-line comments
-    # Remove single-line comments
-    content = re.sub(r'--.*', '', content)  # Remove SQL single-line comments
-    content = re.sub(r'#.*', '', content)   # Remove Python-style comments
+    # Remove comments from content
+    content = remove_comments(content)
 
-    # Split the cleaned content back into lines
+    # Extract CTE aliases
+    cte_aliases = extract_cte_aliases(content)
+
+    # Split the cleaned content into lines
     lines = content.split('\n')
 
     for line_number, line_content in enumerate(lines, start=1):
@@ -93,6 +85,9 @@ def search_tables_in_file(file_path, repo_url, repo_path):
         sql_tables = sql_table_pattern.findall(line_content)
         for match in sql_tables:
             table_name = match[1]
+            # Ignore if table_name is a CTE alias
+            if table_name.lower() in (alias.lower() for alias in cte_aliases):
+                continue
             relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
             github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
             tables_info.append({'table': table_name, 'filepath': github_link})
