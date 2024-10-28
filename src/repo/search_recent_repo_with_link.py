@@ -62,54 +62,49 @@ def get_recent_files(repo_path, since="12 months ago"):
     files = set(line.strip() for line in result.stdout.splitlines() if line.endswith(('.sql', '.py')))
     return sorted(files)
 
-# Function to search for table names in a file with encoding handling and CTE filtering
+# Function to search for tables in the recently modified files in the main branch
 def search_tables_in_file(file_path, repo_url, repo_path):
     tables_info = []
-    cte_aliases = set()
-    
-    # Extract CTE aliases and filter them out of results
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
+            content = file.read()
     except UnicodeDecodeError:
         try:
             with open(file_path, 'r', encoding='latin-1') as file:
-                lines = file.readlines()
+                content = file.read()
         except UnicodeDecodeError:
             print(f"Skipping file due to encoding issue: {file_path}")
             return tables_info
 
-    # Identify CTE aliases at the beginning of the file
-    for line_content in lines:
-        line_content_cleaned = remove_comments(line_content)
-        cte_matches = cte_pattern.findall(line_content_cleaned)
-        for alias in cte_matches:
-            cte_aliases.add(alias.lower())  # Store CTE aliases in lowercase to ensure case-insensitive matching
+    # Remove multi-line comments
+    content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)  # Remove SQL multi-line comments
+    # Remove single-line comments
+    content = re.sub(r'--.*', '', content)  # Remove SQL single-line comments
+    content = re.sub(r'#.*', '', content)   # Remove Python-style comments
 
-    # Search for tables, excluding CTE aliases
+    # Split the cleaned content back into lines
+    lines = content.split('\n')
+
     for line_number, line_content in enumerate(lines, start=1):
-        line_content_cleaned = remove_comments(line_content)
-        
-        # Use cleaned content in is_false_positive and table extraction
-        if is_false_positive(line_content_cleaned):
+        if is_false_positive(line_content):
             continue
 
         # Find all SQL table references
-        sql_tables = sql_table_pattern.findall(line_content_cleaned)
+        sql_tables = sql_table_pattern.findall(line_content)
         for match in sql_tables:
-            table_name = match[1].lower()  # Use lowercase for consistent CTE exclusion
-            if table_name not in cte_aliases:  # Ignore CTE aliases
-                relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
-                github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
-                tables_info.append({'table': table_name, 'filepath': github_link})
-        
-        # Find all PySpark table references
-        pyspark_tables = pyspark_table_pattern.findall(line_content_cleaned)
-        for match in pyspark_tables:
             table_name = match[1]
+            relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
             github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
             tables_info.append({'table': table_name, 'filepath': github_link})
-    
+
+        # Find all PySpark table references
+        pyspark_tables = pyspark_table_pattern.findall(line_content)
+        for match in pyspark_tables:
+            table_name = match[1]
+            relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
+            github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
+            tables_info.append({'table': table_name, 'filepath': github_link})
+
     return tables_info
 
 # Function to search for tables in the recently modified files in the main branch
