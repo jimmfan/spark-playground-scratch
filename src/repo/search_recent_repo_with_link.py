@@ -46,11 +46,11 @@ def remove_comments(line_content):
     return line_content
 
 # Function to check for Python import statements and SQL functions using 'from'
-def is_false_positive(line_content):
-    line_content = remove_comments(line_content)
-    if re.match(r'^\s*from\s+[a-zA-Z0-9_]+\s+import\s', line_content):
+def is_false_positive(line_content_cleaned):
+    # Directly using the cleaned line content
+    if re.match(r'^\s*from\s+[a-zA-Z0-9_]+\s+import\s', line_content_cleaned):
         return True
-    if re.search(r'\bextract\s*\(.+?\bfrom\b', line_content, re.IGNORECASE):
+    if re.search(r'\bextract\s*\(.+?\bfrom\b', line_content_cleaned, re.IGNORECASE):
         return True
     return False
 
@@ -89,7 +89,9 @@ def search_tables_in_file(file_path, repo_url, repo_path):
     # Search for tables, excluding CTE aliases
     for line_number, line_content in enumerate(lines, start=1):
         line_content_cleaned = remove_comments(line_content)
-        if is_false_positive(line_content):
+        
+        # Use cleaned content in is_false_positive and table extraction
+        if is_false_positive(line_content_cleaned):
             continue
 
         # Find all SQL table references
@@ -144,19 +146,3 @@ def process_repos(repo_urls, base_dir):
         all_repo_tables_info += tables_info
     
     return all_repo_tables_info
-
-# Example usage
-repo_urls = [
-    'https://github.com/yourorg/repo1.git',
-    'https://github.com/yourorg/repo2.git',
-    # Add more repositories here
-]
-
-base_dir = '/path/to/store/cloned/repos'  # Change this to where you want the repos to be stored
-all_tables_info = process_repos(repo_urls, base_dir)
-
-# Output results
-for repo, tables_info in all_tables_info.items():
-    print(f"\nTables found in {repo}:")
-    for entry in tables_info:
-        print(f"  - Table: {entry['table']}, Filepath: {entry['filepath']}")
