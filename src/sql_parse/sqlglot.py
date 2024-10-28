@@ -9,31 +9,33 @@ def extract_tables(sql):
     
     return tables
 
-
+import re
 import sqlglot
 
-def extract_tables_ignore_select(sql):
+def replace_iif_with_case(sql):
+    # Convert IIF(condition, true_value, false_value) to CASE WHEN condition THEN true_value ELSE false_value END
+    pattern = re.compile(r"IIF\(([^,]+),\s*([^,]+),\s*([^)]+)\)", re.IGNORECASE)
+    return pattern.sub(r"CASE WHEN \1 THEN \2 ELSE \3 END", sql)
+
+def extract_tables(sql):
+    # Preprocess the SQL to replace IIF
+    sql = replace_iif_with_case(sql)
+    
     try:
-        # Parse the SQL query
+        # Parse the preprocessed SQL query
         parsed = sqlglot.parse_one(sql)
         
-        # Extract table names by looking specifically for FROM and JOIN clauses
-        tables = []
-        if parsed:
-            for from_expression in parsed.find_all(sqlglot.exp.From):
-                tables.extend([table.name for table in from_expression.find_all(sqlglot.exp.Table)])
-            for join_expression in parsed.find_all(sqlglot.exp.Join):
-                tables.extend([table.name for table in join_expression.find_all(sqlglot.exp.Table)])
-                
+        # Extract table names if parsing succeeded
+        tables = [table.name for table in parsed.find_all(sqlglot.exp.Table)] if parsed else []
     except sqlglot.errors.ParseError:
-        # Handle parse errors, returning an empty list or alternative handling as needed
+        # Return an empty list if parsing fails
         tables = []
     
     return tables
 
 # Example usage
-sql_query = "SELECT name, age, MAX(order_date) FROM users JOIN orders ON users.id = orders.user_id WHERE order_date > '2024-01-01'"
-print(extract_tables_ignore_select(sql_query))  # Output: ['users', 'orders']
+sql_query = "SELECT iif(table.`column name` IS NULL, 'value1', 'value2') AS column_alias FROM table"
+print(extract_tables(sql_query))  # Expected Output: ['table']
 
 
 # Example usage
