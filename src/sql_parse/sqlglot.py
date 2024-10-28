@@ -14,11 +14,12 @@ import sqlglot
 
 def replace_iif_with_case(sql):
     # Convert IIF(condition, true_value, false_value) to CASE WHEN condition THEN true_value ELSE false_value END
+    # Ensure it correctly adds the "END" at the end of each replacement
     pattern = re.compile(r"IIF\(([^,]+),\s*([^,]+),\s*([^)]+)\)", re.IGNORECASE)
     return pattern.sub(r"CASE WHEN \1 THEN \2 ELSE \3 END", sql)
 
 def extract_tables(sql):
-    # Preprocess the SQL to replace IIF
+    # Preprocess the SQL to replace IIF with properly formatted CASE WHEN ... END
     sql = replace_iif_with_case(sql)
     
     try:
@@ -27,8 +28,9 @@ def extract_tables(sql):
         
         # Extract table names if parsing succeeded
         tables = [table.name for table in parsed.find_all(sqlglot.exp.Table)] if parsed else []
-    except sqlglot.errors.ParseError:
-        # Return an empty list if parsing fails
+    except sqlglot.errors.ParseError as e:
+        # Print error and return an empty list if parsing fails
+        print(f"Parsing error: {e}")
         tables = []
     
     return tables
