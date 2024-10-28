@@ -11,7 +11,7 @@ pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\']
 def remove_comments(line_content):
     line_content = re.sub(r'#.*', '', line_content)  # Remove Python-style comments
     line_content = re.sub(r'--.*', '', line_content)  # Remove SQL single-line comments
-    line_content = re.sub(r'/\*.*?\*/', '', line_content)  # Remove SQL multi-line comments
+    line_content = re.sub(r'/\*.*?\*/', '', line_content, flags=re.DOTALL)  # Remove SQL multi-line comments
     return line_content
 
 # Function to check for Python import statements and SQL functions using 'from'
@@ -23,57 +23,66 @@ def is_false_positive(line_content):
         return True
     return False
 
-# Function to get files modified in the last 12 months in the entire repo
+# Function to get files modified in the last 12 months, checking only the main branch
 def get_recent_files(repo_path, since="12 months ago"):
-    command = ["git", "-C", repo_path, "log", f"--since={since}", "--name-only", "--pretty=format:"]
+    command = ["git", "-C", repo_path, "log", f"--since={since}", "--name-only", "--pretty=format:", "main"]
     result = subprocess.run(command, capture_output=True, text=True)
     # Filter for .sql and .py files only and remove duplicates
     files = set(line.strip() for line in result.stdout.splitlines() if line.endswith(('.sql', '.py')))
     return sorted(files)
 
-# Function to search for table names in a file
+# Function to search for table names in a file with encoding handling
 def search_tables_in_file(file_path, repo_url, repo_path):
     tables_info = []
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
-            for line_number, line_content in enumerate(lines, start=1):
-                line_content_cleaned = remove_comments(line_content)
-                if is_false_positive(line_content):
-                    continue
+    except UnicodeDecodeError:
+        try:
+            with open(file_path, 'r', encoding='latin-1') as file:
+                lines = file.readlines()
+        except UnicodeDecodeError:
+            print(f"Skipping file due to encoding issue: {file_path}")
+            return tables_info
 
-                # Find all SQL table references
-                sql_tables = sql_table_pattern.findall(line_content_cleaned)
-                for match in sql_tables:
-                    table_name = match[1]
-                    relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
-                    github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
-                    tables_info.append({'table': table_name, 'filepath': github_link})
-                
-                # Find all PySpark table references
-                pyspark_tables = pyspark_table_pattern.findall(line_content_cleaned)
-                for match in pyspark_tables:
-                    table_name = match[1]
-                    github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
-                    tables_info.append({'table': table_name, 'filepath': github_link})
-                
-    except Exception as e:
-        print(f"Error reading {file_path}: {e}")
+    for line_number, line_content in enumerate(lines, start=1):
+        line_content_cleaned = remove_comments(line_content)
+        if is_false_positive(line_content):
+            continue
+
+        # Find all SQL table references
+        sql_tables = sql_table_pattern.findall(line_content_cleaned)
+        for match in sql_tables:
+            table_name = match[1]
+            relative_file_path = os.path.relpath(file_path, repo_path).replace(os.sep, '/')
+            github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
+            tables_info.append({'table': table_name, 'filepath': github_link})
+        
+        # Find all PySpark table references
+        pyspark_tables = pyspark_table_pattern.findall(line_content_cleaned)
+        for match in pyspark_tables:
+            table_name = match[1]
+            github_link = f"{repo_url.replace('.git', '')}/blob/main/{relative_file_path}#L{line_number}"
+            tables_info.append({'table': table_name, 'filepath': github_link})
+    
     return tables_info
 
-# Function to search for tables in the recently modified files in the entire repo
+# Function to search for tables in the recently modified files in the main branch
 def search_tables_in_recent_files(repo_path, repo_url):
     recent_files = get_recent_files(repo_path)  # Get files modified in the last 12 months
     repo_tables_info = []
     for file in recent_files:
         file_path = os.path.join(repo_path, file)
+        if not os.path.exists(file_path):
+            print(f"File does not exist in the main branch, skipping: {file_path}")
+            continue
         tables_info = search_tables_in_file(file_path, repo_url, repo_path)
         repo_tables_info.extend(tables_info)
     return repo_tables_info
 
 # Function to clone repos and search for tables in recent files
 def process_repos(repo_urls, base_dir):
-    all_repo_tables_info = {}
+    all_repo_tables_info = []
     for repo_url in repo_urls:
         repo_name = repo_url.split('/')[-1].replace('.git', '')
         repo_path = os.path.join(base_dir, repo_name)
@@ -89,7 +98,7 @@ def process_repos(repo_urls, base_dir):
         
         print(f"Searching tables in the recently modified files of {repo_name}...")
         tables_info = search_tables_in_recent_files(repo_path, repo_url)
-        all_repo_tables_info[repo_name] = tables_info
+        all_repo_tables_info = += tables_info
     
     return all_repo_tables_info
 
