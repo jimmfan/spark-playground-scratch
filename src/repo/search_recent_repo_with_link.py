@@ -9,10 +9,14 @@ pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\']
 cte_pattern = re.compile(r'\bwith\s+([a-zA-Z0-9_]+)\s+as\s*\(', re.IGNORECASE)
 
 # Function to remove comments from a line
+# Function to remove comments from a line or block of text
 def remove_comments(line_content):
+    # Remove Python-style comments (#)
     line_content = re.sub(r'#.*', '', line_content)  # Remove Python-style comments
+    # Remove SQL single-line comments (--)
     line_content = re.sub(r'--.*', '', line_content)  # Remove SQL single-line comments
-    line_content = re.sub(r'/\*.*?\*/', '', line_content, flags=re.DOTALL)  # Remove SQL multi-line comments
+    # Remove all multi-line SQL comments (/* ... */) across multiple lines
+    line_content = re.sub(r'/\*[\s\S]*?\*/', '', line_content)  # Remove SQL multi-line comments
     return line_content
 
 # Function to check for Python import statements and SQL functions using 'from'
