@@ -7,27 +7,49 @@ from git import Repo
 sql_table_pattern = re.compile(r'\b(from|join)\s+([a-zA-Z0-9_.]+)\b', re.IGNORECASE)
 pyspark_table_pattern = re.compile(r'(spark\.table\(["\'])([a-zA-Z0-9_.]+)(["\'])')
 
-
-# Function to remove comments from a line
-def remove_comments(line_content):
-    # Remove Python-style comments (#)
-    # r'/\*\s*[\s\S]*?\s*\*/'
-    line_content = re.sub(r'#.*', '', line_content)  # Remove Python-style comments
-    # Remove SQL single-line comments (--)
-    line_content = re.sub(r'--.*', '', line_content)  # Remove SQL single-line comments
-    # Remove all multi-line SQL comments (/* ... */) across multiple lines
-    line_content = re.sub(r'/\*[\s\S]*?\*/', '', line_content)  # Remove SQL multi-line comments
-    return line_content
-
-
-# Function to remove comments from the content
-def remove_comments(content):
-    # Remove all multi-line comments (/* ... */)
-    content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
-    # Remove single-line comments (-- and #)
-    content = re.sub(r'--.*', '', content)
-    content = re.sub(r'#.*', '', content)
-    return content
+# Function to remove comments from lines
+def remove_comments_from_lines(lines):
+    cleaned_lines = []
+    in_multiline_comment = False
+    for line in lines:
+        original_line = line
+        if not in_multiline_comment:
+            # Check for start of multi-line comment
+            while True:
+                start_comment = line.find('/*')
+                single_line_comment_pos = min(
+                    [pos for pos in [line.find('--'), line.find('#')] if pos != -1] + [len(line)]
+                )
+                if start_comment != -1 and start_comment < single_line_comment_pos:
+                    end_comment = line.find('*/', start_comment + 2)
+                    if end_comment != -1:
+                        # Remove the multi-line comment from the line
+                        line = line[:start_comment] + line[end_comment + 2:]
+                    else:
+                        # Multi-line comment starts but doesn't end on this line
+                        line = line[:start_comment]
+                        in_multiline_comment = True
+                        break
+                else:
+                    break
+            # Remove single-line comments
+            line = re.sub(r'--.*', '', line)
+            line = re.sub(r'#.*', '', line)
+            cleaned_lines.append(line.rstrip('\n'))
+        else:
+            # We are inside a multi-line comment
+            end_comment = line.find('*/')
+            if end_comment != -1:
+                # Multi-line comment ends on this line
+                line = line[end_comment + 2:]
+                in_multiline_comment = False
+                # Check if another multi-line comment starts on the same line
+                line = remove_comments_from_lines([line])[0]
+                cleaned_lines.append(line.rstrip('\n'))
+            else:
+                # Entire line is within a multi-line comment
+                cleaned_lines.append('')
+    return cleaned_lines
 
 # Function to extract CTE aliases from the content
 def extract_cte_aliases(content):
@@ -59,25 +81,23 @@ def search_tables_in_file(file_path, repo_url, repo_path):
     tables_info = []
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
+            lines = file.readlines()
     except UnicodeDecodeError:
         try:
             with open(file_path, 'r', encoding='latin-1') as file:
-                content = file.read()
+                lines = file.readlines()
         except UnicodeDecodeError:
             print(f"Skipping file due to encoding issue: {file_path}")
             return tables_info
 
-    # Remove comments from content
-    content = remove_comments(content)
+    # Remove comments from lines
+    cleaned_lines = remove_comments_from_lines(lines)
 
-    # Extract CTE aliases
-    cte_aliases = extract_cte_aliases(content)
+    # Extract CTE aliases from the cleaned content
+    cleaned_content = ''.join(cleaned_lines)
+    cte_aliases = extract_cte_aliases(cleaned_content)
 
-    # Split the cleaned content into lines
-    lines = content.split('\n')
-
-    for line_number, line_content in enumerate(lines, start=1):
+    for line_number, line_content in enumerate(cleaned_lines, start=1):
         if is_false_positive(line_content):
             continue
 
