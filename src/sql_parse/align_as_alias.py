@@ -11,18 +11,29 @@ def align_aliases(sql):
             expressions = []
             max_length = 0
             for select_expression in node.expressions:
-                expr_sql = select_expression.this.sql()
-                alias = select_expression.alias
-                expressions.append((expr_sql, alias))
-                max_length = max(max_length, len(expr_sql))
+                if isinstance(select_expression, exp.Alias):
+                    expr_sql = select_expression.this.sql()
+                    alias = select_expression.alias
+                else:
+                    expr_sql = select_expression.sql()
+                    alias = None
+                # Remove line breaks and excess whitespace for length calculation
+                expr_sql_no_breaks = ' '.join(expr_sql.split())
+                expr_length = len(expr_sql_no_breaks)
+                expressions.append((expr_sql, alias, expr_length))
+                max_length = max(max_length, expr_length)
             # Reconstruct select expressions with aligned aliases
             new_expressions = []
-            for expr_sql, alias in expressions:
-                spaces = ' ' * (max_length - len(expr_sql) + 1)
+            for expr_sql, alias, expr_length in expressions:
+                # Calculate spaces based on the length without line breaks
+                spaces = ' ' * (max_length - expr_length + 1)
                 if alias:
-                    new_expr_sql = expr_sql + spaces + 'AS ' + alias
+                    # Remove line breaks for alignment but keep original formatting
+                    expr_sql_no_breaks = ' '.join(expr_sql.split())
+                    new_expr_sql = expr_sql_no_breaks + spaces + 'AS ' + alias
                 else:
                     new_expr_sql = expr_sql
+                # Parse the new expression
                 new_expression = sqlglot.parse_one(new_expr_sql)
                 new_expressions.append(new_expression)
             # Replace the expressions in the select node
@@ -52,7 +63,16 @@ cte2 AS (
     SELECT column3, column4
     FROM table2
 )
-SELECT cte1.column1 AS col1_alias, cte2.column3 AS col3_alias
+SELECT
+    cte1.column1 AS col1_alias,
+    cte2.column3 AS col3_alias,
+    (SELECT
+        MAX(value)
+     FROM
+        table3
+     WHERE
+        id = cte1.id
+    ) AS max_value
 FROM cte1
 JOIN cte2 ON cte1.column2 = cte2.column4
 '''
