@@ -57,10 +57,13 @@ def align_select_expressions(select_lines, fixed_column):
 
     # Extract expressions and aliases, calculate maximum expression length
     for line in select_lines:
+        # Capture leading whitespace to maintain indentation
+        leading_whitespace_match = re.match(r'^(\s*)', line)
+        leading_whitespace = leading_whitespace_match.group(1) if leading_whitespace_match else ''
         line_stripped = line.strip()
         match = alias_regex.match(line_stripped)
         if match:
-            expr_part = match.group(1).strip()
+            expr_part = match.group(1).rstrip()
             alias_part = match.group(3).strip()
         else:
             expr_part = line_stripped
@@ -68,19 +71,22 @@ def align_select_expressions(select_lines, fixed_column):
         expr_no_spaces = ' '.join(expr_part.split())
         expr_length = len(expr_no_spaces)
         max_expr_length = max(max_expr_length, expr_length)
-        expressions.append((expr_part, alias_part, expr_length))
+        expressions.append((leading_whitespace, expr_part, alias_part, expr_length))
 
-    # Align the aliases based on the fixed column
+    # Decide the column to align to
+    padding = 1  # You can adjust this padding as needed
+    align_column = max(fixed_column, max_expr_length + padding)
+
+    # Align the aliases based on the align_column
     aligned_lines = []
-    for expr_part, alias_part, expr_length in expressions:
-        spaces_needed = max(1, fixed_column - expr_length)
+    for leading_whitespace, expr_part, alias_part, expr_length in expressions:
+        spaces_needed = max(1, align_column - expr_length)
         spaces = ' ' * spaces_needed
         if alias_part:
             aligned_line = f"{expr_part}{spaces}AS {alias_part}"
         else:
             aligned_line = expr_part
-        aligned_lines.append('  ' + aligned_line)  # Maintain indentation
-
+        aligned_lines.append(f"{leading_whitespace}{aligned_line}")
     return aligned_lines
 
 # Example usage
@@ -103,10 +109,15 @@ SELECT
       table3
     WHERE
       id = cte1.id
-  ) AS max_value
+  ) AS max_value,
+  CASE
+    WHEN cte1.column2 > 0 THEN 'positive'
+    ELSE 'non-positive'
+  END AS column_case
 FROM cte1
 JOIN cte2 ON cte1.column2 = cte2.column4
 '''
 
 formatted_sql = align_aliases(sql, fixed_column=60)
 print(formatted_sql)
+
