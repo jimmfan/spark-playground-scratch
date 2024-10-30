@@ -1,15 +1,14 @@
 import sqlglot
 from sqlglot import expressions as exp
 
-def align_aliases(sql):
+def align_aliases(sql, fixed_column=60):
     # Parse the SQL query into an AST
-    parsed = sqlglot.parse_one(sql)
+    parsed = sqlglot.parse_one(sql, read='hive')
 
     def traverse(node):
         if isinstance(node, exp.Select):
             # Collect all select expressions
             expressions = []
-            max_length = 0
             for select_expression in node.expressions:
                 if isinstance(select_expression, exp.Alias):
                     expr_sql = select_expression.this.sql()
@@ -21,12 +20,13 @@ def align_aliases(sql):
                 expr_sql_no_breaks = ' '.join(expr_sql.split())
                 expr_length = len(expr_sql_no_breaks)
                 expressions.append((expr_sql, alias, expr_length))
-                max_length = max(max_length, expr_length)
+            # Set the fixed column where 'AS' should align
             # Reconstruct select expressions with aligned aliases
             new_expressions = []
             for expr_sql, alias, expr_length in expressions:
-                # Calculate spaces based on the length without line breaks
-                spaces = ' ' * (max_length - expr_length + 1)
+                # Calculate spaces based on the fixed column alignment
+                spaces_needed = max(1, fixed_column - expr_length)
+                spaces = ' ' * spaces_needed
                 if alias:
                     # Remove line breaks for alignment but keep original formatting
                     expr_sql_no_breaks = ' '.join(expr_sql.split())
