@@ -53,7 +53,8 @@ def align_select_expressions(select_lines, fixed_column):
     max_expr_length = 0
 
     # Regular expression to split expressions and aliases
-    alias_regex = re.compile(r'^(.*?)(\s+AS\s+)(.+)$', re.IGNORECASE)
+    # Match only when 'AS' is not inside parentheses (e.g., not inside functions)
+    alias_regex = re.compile(r'^(.*?)(\s+AS\s+)([^\(\)]+)$', re.IGNORECASE)
 
     # Extract expressions and aliases, calculate maximum expression length
     for line in select_lines:
@@ -61,17 +62,26 @@ def align_select_expressions(select_lines, fixed_column):
         leading_whitespace_match = re.match(r'^(\s*)', line)
         leading_whitespace = leading_whitespace_match.group(1) if leading_whitespace_match else ''
         line_stripped = line.strip()
+        
+        # Check if line contains 'AS' used for aliasing
         match = alias_regex.match(line_stripped)
         if match:
             expr_part = match.group(1).rstrip()
             alias_part = match.group(3).strip()
+            # Ensure 'AS' is not inside parentheses
+            if '(' not in expr_part or expr_part.rfind('(') < expr_part.rfind(')'):
+                is_alias = True
+            else:
+                is_alias = False
         else:
             expr_part = line_stripped
             alias_part = ''
+            is_alias = False
+
         expr_no_spaces = ' '.join(expr_part.split())
         expr_length = len(expr_no_spaces)
         max_expr_length = max(max_expr_length, expr_length)
-        expressions.append((leading_whitespace, expr_part, alias_part, expr_length))
+        expressions.append((leading_whitespace, expr_part, alias_part, expr_length, is_alias))
 
     # Decide the column to align to
     padding = 1  # You can adjust this padding as needed
@@ -79,10 +89,10 @@ def align_select_expressions(select_lines, fixed_column):
 
     # Align the aliases based on the align_column
     aligned_lines = []
-    for leading_whitespace, expr_part, alias_part, expr_length in expressions:
-        spaces_needed = max(1, align_column - expr_length)
-        spaces = ' ' * spaces_needed
-        if alias_part:
+    for leading_whitespace, expr_part, alias_part, expr_length, is_alias in expressions:
+        if is_alias:
+            spaces_needed = max(1, align_column - expr_length)
+            spaces = ' ' * spaces_needed
             aligned_line = f"{expr_part}{spaces}AS {alias_part}"
         else:
             aligned_line = expr_part
@@ -113,11 +123,12 @@ SELECT
   CASE
     WHEN cte1.column2 > 0 THEN 'positive'
     ELSE 'non-positive'
-  END AS column_case
+  END AS column_case,
+  CAST(some_col AS date) AS date_col,
+  CAST(other_col AS STRING) AS string_col
 FROM cte1
 JOIN cte2 ON cte1.column2 = cte2.column4
 '''
 
 formatted_sql = align_aliases(sql, fixed_column=60)
 print(formatted_sql)
-
