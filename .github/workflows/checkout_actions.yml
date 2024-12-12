@@ -1,27 +1,29 @@
-name: Code Quality
+name: Checkout repository
+description: "Action to clone and checks out the repository."
+inputs:
+  github_token:
+    description: "GitHub token used for authentication"
+    required: true
 
-on:
-  workflow_dispatch:
-
-jobs:
-  runs-on: ubuntu-22.04
+runs:
+  using: "composite"
   steps:
-    generate_template:
-    - name: Manually clone repository (similar to actions/checkout)
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Set up Git configs
+      env: 
+        USERNAME: ${{ github.actor }}
       run: |
-        # Set up user and safe directory (actions/checkout does this)
-        git config --global user.name "github-actions"
+        git config --global user.name $USERNAME
         git config --global user.email "github-actions@github.com"
         git config --global --add safe.directory $GITHUB_WORKSPACE
 
-        # Initialize and add origin using the token for authentication
-        git init .
+    - name: Initialize repository and fetch code
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_SERVER_URL: ${{ env.GITHUB_SERVER_URL }}
+        GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }}
+        GITHUB_REF: ${{ env.GITHUB_REF }}
+      run: |
+        git init
         git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-
-        # Fetch only the needed ref/commit with limited depth (like checkout's fetch-depth default)
         git fetch --depth=1 origin $GITHUB_REF
-
-        # Check out the fetched commit
         git checkout FETCH_HEAD
