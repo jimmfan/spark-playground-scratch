@@ -1,7 +1,7 @@
 name: Generate Project Structure
 
 on:
-  push:
+  workflow_dispatch:
 
 env:
   template_directory: 'basic_python'
