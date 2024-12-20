@@ -22,22 +22,19 @@ confluence = Confluence(
 
 def page_exists_under_parent(space, title, parent_id):
     """
-    Checks if a page with the given title exists under the specified parent.
+    Checks if a page with the given title exists under the specified parent using CQL.
     """
-    # Fetch child pages of the parent
-    children = confluence.get_page_child_by_type(parent_id, 'page', start=0, limit=100)
+    # Construct the CQL query
+    cql = f'title = "{title}" AND ancestor = {parent_id}'
     
-    # Handle pagination if there are more than 100 children
-    while True:
-        for child in children.get('results', []):
-            if child['title'] == title:
-                return child  # Page exists under the parent
-        if not children.get('_links', {}).get('next'):
-            break  # No more pages to fetch
-        # Fetch the next set of children
-        children = confluence.get_page_child_by_type(parent_id, 'page', start=children['start'] + children['limit'], limit=100)
+    # Execute the CQL query
+    result = confluence.cql(cql, limit=1)
     
+    # Check if any results were returned
+    if result.get('results'):
+        return result['results'][0]  # Page exists under the parent
     return None  # Page does not exist under the parent
+
 
 def create_page(title, content, space, parent_id=None):
     """
