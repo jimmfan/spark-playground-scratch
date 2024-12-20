@@ -43,33 +43,33 @@ def create_page(title, content, space, parent_id=None):
 
 def convert_markdown_to_html(markdown_content):
     """
-    Converts Markdown content to HTML.
+    Converts a Markdown string to HTML.
     """
     html_content = markdown2.markdown(markdown_content)
     return html_content
 
-def consolidate_sections(sections):
-    """
-    Concatenates all sections' Markdown content into a single Markdown string.
-    """
-    consolidated_markdown = ""
-    for section_title, content in sections.items():
-        consolidated_markdown += content + "\n\n"
-    return consolidated_markdown
-
 def traverse_structure(structure, parent_id=None):
     """
-    Traverses the documentation structure and creates consolidated pages for each project.
+    Recursively traverses the documentation structure and creates pages.
+    Consolidates subsections into single pages.
     """
-    for project_name, sections in structure.items():
-        # Consolidate all sections into a single Markdown string
-        consolidated_markdown = consolidate_sections(sections)
+    for project_name, project_sections in structure.items():
+        print(f"Processing project: {project_name}")
+        # Create or get the project page
+        project_page_id = create_page(project_name, "", SPACE_KEY, parent_id)
         
-        # Convert the consolidated Markdown to HTML
-        html_content = convert_markdown_to_html(consolidated_markdown)
-        
-        # Create the project page under the root
-        project_page_id = create_page(project_name, html_content, SPACE_KEY, parent_id=parent_id)
+        for section_name, subsections in project_sections.items():
+            print(f"  Creating section: {section_name}")
+            # Consolidate all subsections into one content string
+            consolidated_content = ""
+            for subsection_title, subsection_content in subsections.items():
+                consolidated_content += subsection_content + "\n\n"
+            
+            # Convert the consolidated Markdown to HTML
+            html_content = convert_markdown_to_html(consolidated_content)
+            
+            # Create the section page under the project page
+            create_page(section_name, html_content, SPACE_KEY, parent_id=project_page_id)
 
 def main():
     # Create the root page if it doesn't exist
@@ -86,7 +86,7 @@ def main():
     
     root_page_id = root_page['id']
     
-    # Start traversing and creating consolidated pages for each project
+    # Start traversing and creating pages for each project
     traverse_structure(documentation_structure, parent_id=root_page_id)
 
 if __name__ == "__main__":
