@@ -1,7 +1,6 @@
 # create_confluence_pages.py
 
 from atlassian import Confluence
-import markdown2
 import os
 
 # Import the updated documentation structure
@@ -21,15 +20,40 @@ confluence = Confluence(
     password=API_TOKEN
 )
 
+def page_exists_under_parent(space, title, parent_id):
+    """
+    Checks if a page with the given title exists under the specified parent.
+    """
+    # Fetch child pages of the parent
+    children = confluence.get_page_child_by_type(parent_id, 'page', start=0, limit=100)
+    
+    # Handle pagination if there are more than 100 children
+    while True:
+        for child in children.get('results', []):
+            if child['title'] == title:
+                return child  # Page exists under the parent
+        if not children.get('_links', {}).get('next'):
+            break  # No more pages to fetch
+        # Fetch the next set of children
+        children = confluence.get_page_child_by_type(parent_id, 'page', start=children['start'] + children['limit'], limit=100)
+    
+    return None  # Page does not exist under the parent
+
 def create_page(title, content, space, parent_id=None):
     """
-    Creates a Confluence page with the given title and content.
+    Creates a Confluence page under the specified parent if it doesn't already exist.
     """
-    # Check if the page already exists under the given parent
-    existing_page = confluence.get_page_by_title(space, title, parent_id=parent_id)
-    if existing_page:
-        print(f"Page '{title}' already exists under parent ID {parent_id}. Skipping creation.")
-        return existing_page['id']
+    if parent_id:
+        existing_page = page_exists_under_parent(space, title, parent_id)
+        if existing_page:
+            print(f"Page '{title}' already exists under parent ID {parent_id}. Skipping creation.")
+            return existing_page['id']
+    else:
+        # If no parent_id is specified, check globally within the space
+        existing_page = confluence.get_page_by_title(space, title)
+        if existing_page:
+            print(f"Page '{title}' already exists in space '{space}'. Skipping creation.")
+            return existing_page['id']
     
     # Create the page
     page = confluence.create_page(
@@ -41,35 +65,18 @@ def create_page(title, content, space, parent_id=None):
     print(f"Created page: {title}")
     return page['id']
 
-def convert_markdown_to_html(markdown_content):
-    """
-    Converts a Markdown string to HTML.
-    """
-    html_content = markdown2.markdown(markdown_content)
-    return html_content
-
 def traverse_structure(structure, parent_id=None):
     """
     Recursively traverses the documentation structure and creates pages.
-    Consolidates subsections into single pages.
     """
-    for project_name, project_sections in structure.items():
-        print(f"Processing project: {project_name}")
-        # Create or get the project page
-        project_page_id = create_page(project_name, "", SPACE_KEY, parent_id)
-        
-        for section_name, subsections in project_sections.items():
-            print(f"  Creating section: {section_name}")
-            # Consolidate all subsections into one content string
-            consolidated_content = ""
-            for subsection_title, subsection_content in subsections.items():
-                consolidated_content += subsection_content + "\n\n"
-            
-            # Convert the consolidated Markdown to HTML
-            html_content = convert_markdown_to_html(consolidated_content)
-            
-            # Create the section page under the project page
-            create_page(section_name, html_content, SPACE_KEY, parent_id=project_page_id)
+    for title, content in structure.items():
+        if isinstance(content, dict):
+            # If content is a dictionary, create the page and recurse
+            page_id = create_page(title, "", SPACE_KEY, parent_id)
+            traverse_structure(content, parent_id=page_id)
+        else:
+            # If content is a string, create the page with the content
+            create_page(title, content, SPACE_KEY, parent_id)
 
 def main():
     # Create the root page if it doesn't exist
