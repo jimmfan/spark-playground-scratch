@@ -78,11 +78,21 @@ def execute_query():
 
 @solara.component
 def EditableTable():
-    """Editable DataFrame component"""
+    """Editable table using Solara's DataTable component"""
     if not filtered_df.value.empty:
-        df = solara.DataFrame(filtered_df.value, on_change=edited_df.set)
+        # Convert DataFrame to a list of dictionaries for editing
+        data_records = solara.reactive(filtered_df.value.to_dict(orient="records"))
+
+        def update_data(updated_records):
+            """Update DataFrame when table is edited"""
+            try:
+                updated_df = pd.DataFrame(updated_records)
+                edited_df.set(updated_df)  # Save the modified DataFrame
+            except Exception as e:
+                solara.error(f"Error updating table: {e}")
+
         solara.Info("Edit the filtered data below:")
-        return df
+        solara.DataTable(items=data_records.value, on_change=update_data)
 
 
 @solara.component
