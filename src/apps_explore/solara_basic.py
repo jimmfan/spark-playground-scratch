@@ -1,6 +1,7 @@
+import os
+import io
 import solara
 import pandas as pd
-from io import BytesIO
 
 # Reactive state variables
 uploaded_file = solara.reactive(None)
@@ -16,19 +17,20 @@ def FileUploader():
     """File uploader component"""
     def handle_upload(file):
         try:
-            file_bytes = file["content"]
+            file_bytes = io.BytesIO(file["data"])
             file_name = file["name"]
 
-            if file_name.endswith(".xlsx"):
-                data = pd.read_excel(BytesIO(file_bytes), sheet_name=None)  # Multiple sheets
-            elif file_name.endswith(".csv"):
-                df = pd.read_csv(BytesIO(file_bytes))  # Single table
-                data = {"table": df}
+            table_name, file_ext = os.path.splitext(file_name)
+
+            if file_ext == ".xlsx":
+                data = pd.read_excel(file_bytes, sheet_name=None)  # Multiple sheets
+            elif file_ext == ".csv":
+                df = pd.read_csv(file_bytes)  # Single table
+                data = {table_name: df}
 
             uploaded_file.set(file_name)
             mock_data.set(data)
             table_name.set(list(data.keys())[0] if data else "")
-            filtered_df.set(pd.DataFrame())  # Reset filtered table
 
         except Exception as e:
             solara.error(f"Error loading file: {e}")
@@ -87,7 +89,7 @@ def RunQuery():
 def EditableTable():
     """Editable DataFrame component"""
     if not filtered_df.value.empty:
-        df = solara.DataFrame(filtered_df.value, on_change=edited_df.set)
+        df = solara.DataFrame(filtered_df.value)
         solara.Info("Edit the filtered data below:")
         return df
 

@@ -78,3 +78,80 @@ def FileUploader():
 
     # Open Native File Dialog
     solara.Button("Browse Files", on_click=open_file_dialog)
+
+
+@solara.component
+def QueryInput(on_enter):
+    """Text input for filter condition with Enter key support"""
+    def handle_keypress(event):
+        if event == "Enter":
+            on_enter()  # Trigger the Run Query function
+
+    solara.InputText(
+        "Filter condition (e.g., `age > 30` or `department == 'HR'`):",
+        value=column_filter,
+        on_key=handle_keypress  # Detect keypress
+    )
+
+
+@solara.component
+def RunQuery():
+    """Run query and display results"""
+    def execute_query():
+        """Executes the query on the selected table and triggers UI update"""
+        try:
+            if table_name.value and table_name.value in mock_data.value:
+                df = mock_data.value[table_name.value]
+                if column_filter.value.strip():
+                    filtered_df.set(df.query(column_filter.value))  # Set reactive variable
+                else:
+                    filtered_df.set(df)  # If no filter, use full table
+        except Exception as e:
+            solara.error(f"Error: {e}")
+
+    # Query input field with Enter key support
+    QueryInput(on_enter=execute_query)
+
+    solara.Button("Run Query", on_click=execute_query)
+
+    # Show results if available
+    if not filtered_df.value.empty:
+        solara.Info("Query executed successfully!")
+        solara.Markdown(f"### Table: `{table_name.value}`")
+        EditableTable()
+        DownloadButton()
+
+
+@solara.component
+def EditableTable():
+    """Editable DataFrame component"""
+    if not filtered_df.value.empty:
+        df = solara.DataFrame(filtered_df.value)
+        solara.Info("Edit the filtered data below:")
+        return df
+
+
+@solara.component
+def DownloadButton():
+    """Download modified data"""
+    if not edited_df.value.empty:
+        csv_data = edited_df.value.to_csv(index=False).encode("utf-8")
+        solara.DownloadButton(
+            label="Download Edited Results as CSV",
+            filename=f"{table_name.value}_edited.csv",
+            data=csv_data,
+        )
+
+
+@solara.component
+def Page():
+    """Main Solara application layout"""
+    solara.Title("Dynamic Query Runner with Editable Table")
+    solara.Markdown("Upload an Excel or CSV file, query it, edit the results, and download the modified data.")
+
+    FileUploader()
+    if uploaded_file.value:
+        solara.Success(f"Successfully loaded file: {uploaded_file.value}")
+        TableSelector()
+        QueryInput()
+        RunQuery()
