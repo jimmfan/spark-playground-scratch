@@ -2,12 +2,12 @@ import solara
 import pandas as pd
 from io import BytesIO
 
-# Application state
+# Reactive state variables
 uploaded_file = solara.reactive(None)
 mock_data = solara.reactive({})
 table_name = solara.reactive("")
 column_filter = solara.reactive("")
-filtered_df = solara.reactive(pd.DataFrame())
+filtered_df = solara.reactive(pd.DataFrame())  # Ensure UI updates when changed
 edited_df = solara.reactive(pd.DataFrame())
 
 
@@ -28,6 +28,7 @@ def FileUploader():
             uploaded_file.set(file_name)
             mock_data.set(data)
             table_name.set(list(data.keys())[0] if data else "")
+            filtered_df.set(pd.DataFrame())  # Reset filtered table
 
         except Exception as e:
             solara.error(f"Error loading file: {e}")
@@ -55,44 +56,40 @@ def QueryInput():
 @solara.component
 def RunQuery():
     """Run query and display results"""
-    if solara.Button("Run Query", on_click=lambda: execute_query()):
-        if not filtered_df.value.empty:
-            solara.Info("Query executed successfully!")
-            solara.Markdown(f"### Table: `{table_name.value}`")
-            EditableTable()
-            DownloadButton()
+    def execute_query():
+        """Executes the query on the selected table and triggers UI update"""
+        try:
+            if table_name.value and table_name.value in mock_data.value:
+                df = mock_data.value[table_name.value]
+                if column_filter.value.strip():
+                    filtered_df.set(df.query(column_filter.value))  # Set reactive variable
+                else:
+                    filtered_df.set(df)  # If no filter, use full table
+        except Exception as e:
+            solara.error(f"Error: {e}")
 
+    solara.Button("Run Query", on_click=execute_query)
 
-def execute_query():
-    """Executes the query on the selected table"""
-    try:
-        if table_name.value and table_name.value in mock_data.value:
-            df = mock_data.value[table_name.value]
-            if column_filter.value.strip():
-                filtered_df.set(df.query(column_filter.value))
-            else:
-                filtered_df.set(df)
-    except Exception as e:
-        solara.error(f"Error: {e}")
+    # Auto-refresh UI when filtered_df changes
+    @solara.use_effect(dependencies=[filtered_df])
+    def update_ui():
+        pass  # This will force Solara to refresh the component
+
+    # Show results if available
+    if not filtered_df.value.empty:
+        solara.Info("Query executed successfully!")
+        solara.Markdown(f"### Table: `{table_name.value}`")
+        EditableTable()
+        DownloadButton()
 
 
 @solara.component
 def EditableTable():
-    """Editable table using Solara's DataTable component"""
+    """Editable DataFrame component"""
     if not filtered_df.value.empty:
-        # Convert DataFrame to a list of dictionaries for editing
-        data_records = solara.reactive(filtered_df.value.to_dict(orient="records"))
-
-        def update_data(updated_records):
-            """Update DataFrame when table is edited"""
-            try:
-                updated_df = pd.DataFrame(updated_records)
-                edited_df.set(updated_df)  # Save the modified DataFrame
-            except Exception as e:
-                solara.error(f"Error updating table: {e}")
-
+        df = solara.DataFrame(filtered_df.value, on_change=edited_df.set)
         solara.Info("Edit the filtered data below:")
-        solara.DataTable(items=data_records.value, on_change=update_data)
+        return df
 
 
 @solara.component
@@ -108,7 +105,7 @@ def DownloadButton():
 
 
 @solara.component
-def App():
+def Page():
     """Main Solara application layout"""
     solara.Title("Dynamic Query Runner with Editable Table")
     solara.Markdown("Upload an Excel or CSV file, query it, edit the results, and download the modified data.")
@@ -119,7 +116,3 @@ def App():
         TableSelector()
         QueryInput()
         RunQuery()
-
-
-# Run the app
-App()
