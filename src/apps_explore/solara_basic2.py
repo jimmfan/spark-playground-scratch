@@ -11,15 +11,20 @@ edited_df = solara.reactive(pd.DataFrame())
 def load_file():
     """Loads the uploaded file into a DataFrame."""
     if uploaded_file.value:
-        file_ext = uploaded_file.value.name.split(".")[-1].lower()
-        if file_ext == "csv":
-            df = pd.read_csv(uploaded_file.value)
-        elif file_ext in ["xls", "xlsx"]:
-            df = pd.read_excel(uploaded_file.value)
-        else:
-            solara.warning("Unsupported file format. Please upload a CSV or Excel file.")
-            return
-        edited_df.set(df)
+        file_content = uploaded_file.value["data"]
+        file_ext = uploaded_file.value["name"].split(".")[-1].lower()
+        try:
+            file_stream = io.BytesIO(file_content)
+            if file_ext == "csv":
+                df = pd.read_csv(file_stream)
+            elif file_ext in ["xls", "xlsx"]:
+                df = pd.read_excel(file_stream)
+            else:
+                solara.warning("Unsupported file format. Please upload a CSV or Excel file.")
+                return
+            edited_df.set(df)
+        except Exception as e:
+            solara.warning(f"Error loading file: {e}")
 
 def filter_data():
     """Filters the DataFrame based on the user input."""
@@ -39,7 +44,8 @@ def get_csv_download_link():
 @solara.component
 def EditableTableComponent():
     """Solara component for uploading, filtering, and editing a DataFrame."""
-    solara.FileDropzone(label="Upload CSV or Excel file", on_file=uploaded_file.set)
+    solara.FileDropzone(label="Drag and drop a CSV or Excel file", on_file=uploaded_file.set)
+    solara.FileInput(label="Upload CSV or Excel", on_file=uploaded_file.set)
     solara.Button("Load File", on_click=load_file)
     
     if not edited_df.value.empty:
@@ -51,8 +57,10 @@ def EditableTableComponent():
         
         solara.Button("Download CSV", on_click=lambda: solara.download(get_csv_download_link(), "filtered_data.csv"))
 
-@solara.page("/")
+@solara.component
 def page():
     """Main page to run the Solara app."""
     solara.Title("Editable Data Table")
     EditableTableComponent()
+
+
