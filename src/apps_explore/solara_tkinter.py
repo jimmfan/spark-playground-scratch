@@ -81,24 +81,34 @@ def FileUploader():
 
 
 @solara.component
-def QueryInput(on_enter):
+def QueryInput():
     """Text input for filter condition with Enter key support"""
-    def handle_keypress(event):
-        if event == "Enter":
-            on_enter()  # Trigger the Run Query function
+    user_input = solara.reactive("")  # Store user input separately
+
+    def handle_change(new_value):
+        """Handles text input changes"""
+        user_input.set(new_value)  # Update reactive state
 
     solara.InputText(
         "Filter condition (e.g., `age > 30` or `department == 'HR'`):",
-        value=column_filter,
-        on_key=handle_keypress  # Detect keypress
+        value=user_input,
+        on_value=handle_change,  # Detect text changes
     )
+
+    # Detect when Enter is pressed
+    @solara.use_effect(dependencies=[user_input])
+    def detect_enter():
+        if user_input.value.endswith("\n"):  # If Enter is detected
+            column_filter.set(user_input.value.strip())  # Update main filter
+            run_query()  # Run the query
 
 
 @solara.component
 def RunQuery():
     """Run query and display results"""
-    def execute_query():
-        """Executes the query on the selected table and triggers UI update"""
+    
+    def run_query():
+        """Executes the query on the selected table and updates UI"""
         try:
             if table_name.value and table_name.value in mock_data.value:
                 df = mock_data.value[table_name.value]
@@ -109,10 +119,11 @@ def RunQuery():
         except Exception as e:
             solara.error(f"Error: {e}")
 
-    # Query input field with Enter key support
-    QueryInput(on_enter=execute_query)
+    # Include QueryInput so it can listen for Enter key
+    QueryInput()
 
-    solara.Button("Run Query", on_click=execute_query)
+    # Button for manual query execution
+    solara.Button("Run Query", on_click=run_query)
 
     # Show results if available
     if not filtered_df.value.empty:
