@@ -9,42 +9,38 @@ df = pd.DataFrame({
     'Age': [25, 30, 35, 40]
 })
 
-st.title("Editable Table with Inline Row Deletion")
+st.title("Editable Table with Left-Aligned Row Deletion")
 
-# JavaScript callback to handle row deletion
-delete_row_js = JsCode("""
-function(params) {
-    var rowIndex = params.node.rowIndex;
-    params.api.applyTransaction({ remove: [params.data] });
+# JavaScript function to create a delete button
+delete_button_js = JsCode("""
+class DeleteButtonRenderer {
+    init(params) {
+        this.params = params;
+        this.eGui = document.createElement('div');
+        this.eGui.innerHTML = '<button style="color: red; cursor: pointer;">❌ Delete</button>';
+        this.eGui.querySelector('button').addEventListener('click', () => {
+            params.api.applyTransaction({ remove: [params.data] });
+        });
+    }
+    getGui() {
+        return this.eGui;
+    }
 }
 """)
 
 # GridOptionsBuilder for AgGrid
 gb = GridOptionsBuilder.from_dataframe(df)
 
-# Make specific columns editable
-gb.configure_columns(["Name", "Age"], editable=True)
-
-# Add a delete button to each row
+# Add the delete button column as the first column
 gb.configure_column(
     "Delete",
-    cellRenderer=JsCode("""
-    class DeleteButtonRenderer {
-        init(params) {
-            this.params = params;
-            this.eGui = document.createElement('div');
-            this.eGui.innerHTML = '<button style="color: red; cursor: pointer;">Delete</button>';
-            this.eGui.querySelector('button').addEventListener('click', () => {
-                params.api.applyTransaction({ remove: [params.data] });
-            });
-        }
-        getGui() {
-            return this.eGui;
-        }
-    }
-    """),
-    width=100
+    cellRenderer=delete_button_js,
+    width=120,
+    pinned='left'  # Pinned to the left side
 )
+
+# Make specific columns editable
+gb.configure_columns(["Name", "Age"], editable=True)
 
 grid_options = gb.build()
 
