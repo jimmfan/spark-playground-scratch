@@ -2,6 +2,90 @@ import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
 
+# JavaScript code for row drag and drop
+onRowDragEnd = JsCode("""
+function onRowDragEnd(e) {
+    console.log('Row dragged', e);
+}
+""")
+
+getRowNodeId = JsCode("""
+function getRowNodeId(data) {
+    return data.id;
+}
+""")
+
+onGridReady = JsCode("""
+function onGridReady() {
+    gridOptions.api.forEachNode(function(node, index) {
+        node.data.id = index;
+    });
+    gridOptions.api.setRowData(gridOptions.rowData);
+}
+""")
+
+onRowDragMove = JsCode("""
+function onRowDragMove(event) {
+    var movingNode = event.node;
+    var overNode = event.overNode;
+    var rowNeedsToMove = movingNode !== overNode;
+
+    if (rowNeedsToMove) {
+        var movingData = movingNode.data;
+        var overData = overNode.data;
+        var fromIndex = gridOptions.rowData.indexOf(movingData);
+        var toIndex = gridOptions.rowData.indexOf(overData);
+
+        gridOptions.rowData.splice(fromIndex, 1);
+        gridOptions.rowData.splice(toIndex, 0, movingData);
+
+        gridOptions.api.setRowData(gridOptions.rowData);
+        gridOptions.api.clearFocusedCell();
+    }
+}
+""")
+
+data = {
+    'table1': {
+        "id": {i: i + 1 for i in range(0, 5)},
+        "process": {i: f"process name {i + 1}" for i in range(0, 5)},
+        "owner": {i: f"owner name {i + 1}" for i in range(0, 5)},
+    },
+    'table2': {
+        "id": {i: i + 1 for i in range(0, 5)},
+        "process": {i: f"process name {i + 1}" for i in range(0, 5)},
+        "owner": {i: f"owner name {i + 1}" for i in range(0, 5)},
+    },
+}
+
+
+df = pd.DataFrame(data)
+
+# Configure grid options
+gb = GridOptionsBuilder.from_dataframe(df)
+gb.configure_default_column(rowDrag=True, rowDragManaged=True)
+gb.configure_grid_options(
+    onRowDragEnd=onRowDragEnd,
+    getRowNodeId=getRowNodeId,
+    onGridReady=onGridReady,
+    onRowDragMove=onRowDragMove,
+    animateRows=True
+)
+gridOptions = gb.build()
+
+# Display the grid
+grid_response = AgGrid(
+    df,
+    gridOptions=gridOptions,
+    update_mode=GridUpdateMode.MANUAL,
+    allow_unsafe_jscode=True
+)
+
+# Updated DataFrame after reordering
+updated_df = grid_response['data']
+st.write(updated_df)
+
+
 # Initialize session state for deleted rows
 if "deleted_rows" not in st.session_state:
     st.session_state.deleted_rows = []
