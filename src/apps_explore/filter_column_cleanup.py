@@ -17,7 +17,7 @@ tables = [
 st.set_page_config(page_title="Streamlit Dashboard", layout="wide")
 st.title("Streamlit Dashboard")
 
-# Initialize session state with original data
+# Initialize session state with original data if not already set
 if "original_df" not in st.session_state:
     st.session_state.original_df = pd.DataFrame(tables)
 
@@ -37,6 +37,12 @@ filter_columns = {
     "owner": "Filter by Owner"
 }
 
+# Clear all filters and reset df_filtered
+if st.button("Clear All Filters"):
+    st.session_state.filter_values = {col: [] for col in filter_columns.keys()}  # Reset filters
+    st.session_state.df_filtered = st.session_state.original_df.copy()  # Reset data
+    st.session_state.refresh_grid = True  # Force AgGrid refresh
+
 # Create columns dynamically for filters
 filter_values = {}
 cols = st.columns(len(filter_columns))
@@ -47,26 +53,16 @@ for (col_name, label), col in zip(filter_columns.items(), cols):
         label, unique_values, default=st.session_state.filter_values[col_name]
     )
 
-# Store selections in session state
+# Save selections in session state
 st.session_state.filter_values = filter_values
 
-# Buttons: Apply Filters & Clear All Filters
-col1, col2 = st.columns(2)
+# Apply filters automatically when selections change
+df_filtered = st.session_state.original_df.copy()
+for col_name, selected_values in filter_values.items():
+    if selected_values:  # Apply filter only if a selection is made
+        df_filtered = df_filtered[df_filtered[col_name].isin(selected_values)]
 
-with col1:
-    if st.button("Apply Filters"):
-        df_filtered = st.session_state.original_df.copy()
-        for col_name, selected_values in filter_values.items():
-            if selected_values:
-                df_filtered = df_filtered[df_filtered[col_name].isin(selected_values)]
-        st.session_state.df_filtered = df_filtered  # Save filtered data
-        st.session_state.refresh_grid = True  # Trigger AgGrid refresh
-
-with col2:
-    if st.button("Clear All Filters"):
-        st.session_state.filter_values = {col: [] for col in filter_columns.keys()}
-        st.session_state.df_filtered = st.session_state.original_df.copy()
-        st.session_state.refresh_grid = True  # Trigger AgGrid refresh
+st.session_state.df_filtered = df_filtered  # Save filtered data
 
 # Display AgGrid with `preselect_js`
 df_filtered = st.session_state.df_filtered
@@ -84,7 +80,7 @@ if not df_filtered.empty:
         enableFilter=True,
         pagination=True,
         paginationPageSize=50,
-        onFirstDataRendered=preselect_js if "refresh_grid" in st.session_state else None,
+        onFirstDataRendered=preselect_js,  # Preselect checkboxes automatically
     )
 
     gridOptions = gb.build()
