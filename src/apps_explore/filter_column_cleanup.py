@@ -33,9 +33,6 @@ if "df_filtered" not in st.session_state:
 if "refresh_grid" not in st.session_state:
     st.session_state.refresh_grid = False
 
-if "force_select_all" not in st.session_state:
-    st.session_state.force_select_all = False  # Used to auto-select all rows
-
 # Define filterable columns
 filter_columns = {
     "source": "Filter by Source",
@@ -46,7 +43,7 @@ filter_columns = {
 # Store previous filter values to detect changes
 prev_filter_values = st.session_state.filter_values.copy()
 
-# Create columns dynamically for filters
+# Create filter UI dynamically
 filter_values = {}
 cols = st.columns(len(filter_columns))
 
@@ -59,9 +56,10 @@ for (col_name, label), col in zip(filter_columns.items(), cols):
 # Save selections in session state
 st.session_state.filter_values = filter_values
 
-# Detect if filters changed and trigger auto-select
-if filter_values != prev_filter_values:
-    st.session_state.force_select_all = True  # Trigger row selection
+# Detect filter changes and trigger auto-selection
+filters_changed = filter_values != prev_filter_values
+if filters_changed:
+    st.session_state.refresh_grid = not st.session_state.refresh_grid  # Force AgGrid refresh
 
 # Apply filters dynamically when selections change
 df_filtered = st.session_state.original_df.copy()
@@ -87,7 +85,7 @@ if not df_filtered.empty:
         enableFilter=True,
         pagination=True,
         paginationPageSize=50,
-        onFirstDataRendered=preselect_js if st.session_state.force_select_all else None,  # Auto-select rows on filter change
+        onFirstDataRendered=preselect_js if filters_changed else None,  # Auto-select rows when filters change
     )
 
     gridOptions = gb.build()
@@ -97,13 +95,10 @@ if not df_filtered.empty:
         gridOptions=gridOptions,
         update_mode=GridUpdateMode.MODEL_CHANGED,
         allow_unsafe_jscode=True,
-        key=str(st.session_state.refresh_grid),  # Force grid refresh when needed
+        key=str(st.session_state.refresh_grid),  # Force grid refresh when filters change
     )
 
     selected_rows = grid_response["selected_rows"]
 
     if any(selected_rows):
         st.write("Selected Rows:", selected_rows)
-
-# Reset selection trigger after rendering
-st.session_state.force_select_all = False
