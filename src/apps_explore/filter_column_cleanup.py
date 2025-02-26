@@ -17,7 +17,7 @@ tables = [
 st.set_page_config(page_title="Streamlit Dashboard", layout="wide")
 st.title("Streamlit Dashboard")
 
-# Initialize session state with original data if not already set
+# Initialize session state
 if "original_df" not in st.session_state:
     st.session_state.original_df = pd.DataFrame(tables)
 
@@ -30,6 +30,12 @@ if "filter_values" not in st.session_state:
 if "df_filtered" not in st.session_state:
     st.session_state.df_filtered = st.session_state.original_df.copy()
 
+if "refresh_grid" not in st.session_state:
+    st.session_state.refresh_grid = False
+
+if "force_select_all" not in st.session_state:
+    st.session_state.force_select_all = False  # Used to auto-select all rows
+
 # Define filterable columns
 filter_columns = {
     "source": "Filter by Source",
@@ -37,11 +43,8 @@ filter_columns = {
     "owner": "Filter by Owner"
 }
 
-# Clear all filters and reset df_filtered
-if st.button("Clear All Filters"):
-    st.session_state.filter_values = {col: [] for col in filter_columns.keys()}  # Reset filters
-    st.session_state.df_filtered = st.session_state.original_df.copy()  # Reset data
-    st.session_state.refresh_grid = True  # Force AgGrid refresh
+# Store previous filter values to detect changes
+prev_filter_values = st.session_state.filter_values.copy()
 
 # Create columns dynamically for filters
 filter_values = {}
@@ -56,10 +59,14 @@ for (col_name, label), col in zip(filter_columns.items(), cols):
 # Save selections in session state
 st.session_state.filter_values = filter_values
 
-# Apply filters automatically when selections change
+# Detect if filters changed and trigger auto-select
+if filter_values != prev_filter_values:
+    st.session_state.force_select_all = True  # Trigger row selection
+
+# Apply filters dynamically when selections change
 df_filtered = st.session_state.original_df.copy()
 for col_name, selected_values in filter_values.items():
-    if selected_values:  # Apply filter only if a selection is made
+    if selected_values:
         df_filtered = df_filtered[df_filtered[col_name].isin(selected_values)]
 
 st.session_state.df_filtered = df_filtered  # Save filtered data
@@ -80,7 +87,7 @@ if not df_filtered.empty:
         enableFilter=True,
         pagination=True,
         paginationPageSize=50,
-        onFirstDataRendered=preselect_js,  # Preselect checkboxes automatically
+        onFirstDataRendered=preselect_js if st.session_state.force_select_all else None,  # Auto-select rows on filter change
     )
 
     gridOptions = gb.build()
@@ -90,7 +97,7 @@ if not df_filtered.empty:
         gridOptions=gridOptions,
         update_mode=GridUpdateMode.MODEL_CHANGED,
         allow_unsafe_jscode=True,
-        key=str(st.session_state.refresh_grid),  # Force grid refresh
+        key=str(st.session_state.refresh_grid),  # Force grid refresh when needed
     )
 
     selected_rows = grid_response["selected_rows"]
@@ -98,5 +105,5 @@ if not df_filtered.empty:
     if any(selected_rows):
         st.write("Selected Rows:", selected_rows)
 
-# Reset refresh state after rendering
-st.session_state.refresh_grid = False
+# Reset selection trigger after rendering
+st.session_state.force_select_all = False
