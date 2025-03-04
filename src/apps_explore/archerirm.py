@@ -1,64 +1,44 @@
-import requests
+from playwright.sync_api import sync_playwright
 
-# Archer API details
-ARCHER_BASE_URL = "https://your-archer-instance.com"
-TOKEN_ENDPOINT = "/api/core/security/login"
-SEARCH_ENDPOINT = "/api/core/content/12345"  # Replace with actual App ID for "plans"
+def download_archer_attachments():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)  # Set True for background execution
+        page = browser.new_page()
 
-# User Credentials
-USERNAME = "your_username"
-PASSWORD = "your_password"
-INSTANCE = "your_instance_name"
+        # Navigate to some login page
+        page.goto("https://some-url.com/login")
 
-# Authenticate to get session token
-auth_payload = {
-    "Username": USERNAME,
-    "Password": PASSWORD,
-    "InstanceName": INSTANCE
-}
+        # Login
+        page.fill("#username", "your_username")  # Adjust selector if needed
+        page.fill("#password", "your_password")
+        page.click("#login-button")  # Adjust as necessary
 
-session = requests.Session()
+        # Navigate to the attachments page
+        page.goto("https://some-url.com/attachments")
+        page.wait_for_selector("table")  # Ensure the table loads
 
-try:
-    auth_response = session.post(f"{ARCHER_BASE_URL}{TOKEN_ENDPOINT}", json=auth_payload)
-    auth_response.raise_for_status()  # Raise error for bad response
+        # Locate the first row to find the "Name" column dynamically
+        headers = page.locator("table tbody tr:first-child td").all_text_contents()
+        print(f"Table Headers: {headers}")  # Debugging output
+        
+        # Find the index of the "Name" column
+        name_column_index = headers.index("Name") + 1  # Convert to 1-based index for nth-child()
 
-    session_token = auth_response.headers.get("Authorization")  # Extract token
+        # Locate all cells under the "Name" column
+        name_cells = page.locator(f"table tbody tr:not(:first-child) td:nth-child({name_column_index})").all()
 
-    if session_token:
-        print("Authentication successful. Token received.")
+        print(f"Found {len(name_cells)} attachments.")
 
-        # Headers with authentication token
-        headers = {
-            "Authorization": session_token,
-            "Content-Type": "application/json"
-        }
+        for idx, cell in enumerate(name_cells):
+            with page.expect_download() as download_info:
+                cell.click()  # Click the "Name" cell to trigger download
+            
+            download = download_info.value
+            file_path = f"downloaded_attachment_{idx+1}.pdf"
+            download.save_as(file_path)
+            print(f"Downloaded: {file_path}")
 
-        # Define the search filter for "plans"
-        search_payload = {
-            "Fields": [1234, 5678],  # Replace with actual field IDs for Plan Name, etc.
-            "Filter": {
-                "Operator": "And",
-                "Filters": [
-                    {
-                        "FieldId": 1234,  # Replace with the field ID for Plan Name
-                        "Operator": "Contains",
-                        "Value": "Your Plan Name"
-                    }
-                ]
-            }
-        }
+        browser.close()
 
-        # Make the request
-        search_response = session.post(f"{ARCHER_BASE_URL}{SEARCH_ENDPOINT}", headers=headers, json=search_payload)
-
-        if search_response.status_code == 200:
-            print("Search successful. Plans found:", search_response.json())
-        else:
-            print(f"Search failed. Status Code: {search_response.status_code}, Response: {search_response.text}")
-
-    else:
-        print("Failed to retrieve authentication token.")
-
-except requests.exceptions.RequestException as e:
-    print(f"Error: {e}")
+# Run the function
+download_archer_attachments()
