@@ -1,0 +1,19 @@
+{
+    "python.REPL.enableREPLSmartSend": false,
+    "python.linting.enabled": true,
+    "python.linting.ruffEnabled": true,
+    "python.linting.ruffPath": "ruff",  // Adjust if using a venv (e.g. "venv/bin/ruff")
+    "python.linting.ruffArgs": [
+        "--extend-select=E,F,I,UP"
+    ],
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": true,
+        "source.organizeImports": true
+    },
+    "python.formatting.provider": "none",  // Disable built-in formatting to let Ruff do it
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "python.analysis.typeCheckingMode": "basic",  // Optional: Type hints checking via Pyright
+    "python.analysis.diagnosticMode": "workspace" // Broader coverage
+}
