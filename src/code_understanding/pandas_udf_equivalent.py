@@ -39,27 +39,31 @@ df = (
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
-def report_conflicting_duplicates(df: DataFrame, key_cols: list) -> DataFrame:
+def show_duplicate_conflicts(df: DataFrame, key_cols: list) -> DataFrame:
     """
-    Find duplicate rows by key, and report which non-key columns have conflicting values.
+    For duplicate keys, return full rows and highlight which non-key columns differ across those duplicates.
 
     Args:
-        df (DataFrame): Input DataFrame
-        key_cols (list): List of column names to group by (keys)
+        df (DataFrame): Input DataFrame.
+        key_cols (list): The columns that define duplicates (primary key columns).
 
     Returns:
-        DataFrame: Rows with duplicate keys and differing values in at least one non-key column
+        DataFrame: All rows with duplicate keys + flag columns indicating where values differ.
     """
     non_key_cols = [c for c in df.columns if c not in key_cols]
+    window = Window.partitionBy(*key_cols)
+
+    # For each non-key column, create a boolean flag if the value is not consistent across the group
+    for col_name in non_key_cols:
+        distinct_count_col = f"{col_name}_conflict"
+        df = df.withColumn(distinct_count_col, 
+                           F.when(F.countDistinct(col_name).over(window) > 1, F.lit(True)).otherwise(F.lit(False)))
+
+    # Filter to only rows where at least one conflict column is True
+    conflict_flags = [f"{c}_conflict" for c in non_key_cols]
+    condition = F.reduce(lambda x, y: x | y, [F.col(f) for f in conflict_flags])
     
-    # Aggregate each non-key column to count distinct values per group
-    agg_exprs = [F.countDistinct(c).alias(f"distinct_{c}") for c in non_key_cols]
-    
-    # Group by keys and apply aggregations
-    conflict_df = df.groupBy(key_cols).agg(*agg_exprs)
-    
-    # Filter to only rows where at least one non-key column has >1 distinct value
-    filter_expr = " OR ".join([f"distinct_{c} > 1" for c in non_key_cols])
-    
-    return conflict_df.filter(filter_expr)
+    return df.filter(condition)
+
