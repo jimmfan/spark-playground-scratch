@@ -37,33 +37,50 @@ df = (
     )
 )
 
-from pyspark.sql import DataFrame
-from pyspark.sql import functions as F
-from pyspark.sql.window import Window
+from pyspark.sql.functions import array, expr, col
+from pyspark.sql.column import Column
+from typing import List
 
-def show_duplicate_conflicts(df: DataFrame, key_cols: list) -> DataFrame:
+def rowwise_min_ignore_nulls(columns: List[str]) -> Column:
     """
-    For duplicate keys, return full rows and highlight which non-key columns differ across those duplicates.
-
-    Args:
-        df (DataFrame): Input DataFrame.
-        key_cols (list): The columns that define duplicates (primary key columns).
-
-    Returns:
-        DataFrame: All rows with duplicate keys + flag columns indicating where values differ.
+    Returns row-wise minimum ignoring nulls using array_min + filter.
+    Equivalent to pandas .min(axis=1, skipna=True)
     """
-    non_key_cols = [c for c in df.columns if c not in key_cols]
-    window = Window.partitionBy(*key_cols)
+    expr_str = f"array_min(filter(array({', '.join(columns)}), x -> x is not null))"
+    return expr(expr_str)
 
-    # For each non-key column, create a boolean flag if the value is not consistent across the group
-    for col_name in non_key_cols:
-        distinct_count_col = f"{col_name}_conflict"
-        df = df.withColumn(distinct_count_col, 
-                           F.when(F.countDistinct(col_name).over(window) > 1, F.lit(True)).otherwise(F.lit(False)))
+def rowwise_max_ignore_nulls(columns: List[str]) -> Column:
+    """
+    Returns row-wise maximum ignoring nulls using array_max + filter.
+    Equivalent to pandas .max(axis=1, skipna=True)
+    """
+    expr_str = f"array_max(filter(array({', '.join(columns)}), x -> x is not null))"
+    return expr(expr_str)
 
-    # Filter to only rows where at least one conflict column is True
-    conflict_flags = [f"{c}_conflict" for c in non_key_cols]
-    condition = F.reduce(lambda x, y: x | y, [F.col(f) for f in conflict_flags])
-    
-    return df.filter(condition)
 
+from pyspark.sql.functions import year, month
+
+def pandas_month_diff(start_col: Column, end_col: Column) -> Column:
+    """
+    Returns the difference in calendar months between two date columns,
+    replicating pandas Period("M") difference behavior.
+    """
+    return (year(end_col) - year(start_col)) * 12 + (month(end_col) - month(start_col))
+
+
+df = df.withColumn(
+    "first_dt",
+    rowwise_min_ignore_nulls(["date1", "date2", "date3"])
+).withColumn(
+    "mob1",
+    pandas_month_diff(col("app_date_entered_system"), col("first_dt"))
+).withColumn(
+    "second_dt",
+    rowwise_min_ignore_nulls(["second_date1", "second_date2", "second_date3"])
+).withColumn(
+    "mob2",
+    pandas_month_diff(col("app_date_entered_system"), col("second_dt"))
+).withColumn(
+    "max_mob",
+    rowwise_max_ignore_nulls(["mob1", "mob2"])
+)
