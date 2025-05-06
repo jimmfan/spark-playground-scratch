@@ -1,0 +1,44 @@
+name: Use Latest RC Tag
+
+on:
+  workflow_dispatch:  # manually triggered, or change to push/merge/etc
+
+jobs:
+  get-latest-rc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for full tag history
+
+      - name: Get latest base tag from main
+        id: get_base_tag
+        run: |
+          git fetch origin main --tags
+          BASE_TAG=$(git tag --merged origin/main | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
+
+          if [[ -z "$BASE_TAG" ]]; then
+            BASE_TAG="v0.1.0"
+          fi
+
+          echo "base=$BASE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Get latest RC tag for base
+        id: get_latest_rc
+        run: |
+          BASE=${{ steps.get_base_tag.outputs.base }}
+          git fetch --tags
+
+          LATEST_RC=$(git tag --list "${BASE}rc*" | sort -V | tail -n1)
+
+          if [[ -z "$LATEST_RC" ]]; then
+            echo "No RC tag found for $BASE"
+            exit 1
+          fi
+
+          echo "rc=$LATEST_RC" >> $GITHUB_OUTPUT
+
+      - name: Use the RC tag
+        run: echo "Latest RC tag is: ${{ steps.get_latest_rc.outputs.rc }}"
