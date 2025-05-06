@@ -1,17 +1,17 @@
-name: Use Latest RC Tag
+name: Generate Next RC Tag
 
 on:
-  workflow_dispatch:  # manually triggered, or change to push/merge/etc
+  workflow_dispatch:  # Manual trigger
 
 jobs:
-  get-latest-rc:
+  get-next-rc:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout full history
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Needed for full tag history
+          fetch-depth: 0  # Needed for tag history
 
       - name: Get latest base tag from main
         id: get_base_tag
@@ -21,12 +21,13 @@ jobs:
 
           if [[ -z "$BASE_TAG" ]]; then
             BASE_TAG="v0.1.0"
+            echo "No base tag found. Defaulting to $BASE_TAG"
           fi
 
           echo "base=$BASE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Get latest RC tag for base
-        id: get_latest_rc
+      - name: Generate next RC tag
+        id: get_next_rc
         run: |
           BASE=${{ steps.get_base_tag.outputs.base }}
           git fetch --tags
@@ -34,11 +35,15 @@ jobs:
           LATEST_RC=$(git tag --list "${BASE}rc*" | sort -V | tail -n1)
 
           if [[ -z "$LATEST_RC" ]]; then
-            echo "No RC tag found for $BASE"
-            exit 1
+            NEXT_TAG="${BASE}rc1"
+          else
+            RC_NUM=$(echo "$LATEST_RC" | sed -E "s/^${BASE}rc([0-9]+)$/\1/")
+            NEXT_RC_NUM=$((RC_NUM + 1))
+            NEXT_TAG="${BASE}rc${NEXT_RC_NUM}"
           fi
 
-          echo "rc=$LATEST_RC" >> $GITHUB_OUTPUT
+          echo "Next RC tag: $NEXT_TAG"
+          echo "tag=$NEXT_TAG" >> $GITHUB_OUTPUT
 
-      - name: Use the RC tag
-        run: echo "Latest RC tag is: ${{ steps.get_latest_rc.outputs.rc }}"
+      - name: Output result
+        run: echo "Generated RC tag: ${{ steps.get_next_rc.outputs.tag }}"
