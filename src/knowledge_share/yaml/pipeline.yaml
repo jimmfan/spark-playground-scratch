@@ -1,0 +1,21 @@
+pipeline:
+  name: customer_transform
+  source:
+    table: raw.customers
+    filter: "country = 'US' AND status = 'active'"
+  target:
+    table: curated.customers_cleaned
+    mode: overwrite
+  columns:
+    - name: customer_id
+      type: string
+      nullable: false
+    - name: full_name
+      type: string
+      transform: "concat_ws(' ', first_name, last_name)"
+    - name: age
+      type: int
+      transform: "datediff(current_date(), birth_date) // 365"
+    - name: signup_date
+      type: date
+      nullable: true
