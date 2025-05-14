@@ -1,31 +1,32 @@
 import sqlglot
-from sqlglot import exp, parse_one
-from collections import defaultdict
+from sqlglot import parse_one, exp
 
-def remove_redundant_aliases(expr):
-    table_aliases = {}
-    table_counts = defaultdict(int)
+def clean_redundant_aliases(expr):
+    alias_mapping = {}
 
-    # Step 1: Find all table aliases
-    for table in expr.find_all(exp.TableAlias):
-        table_expr = table.this
-        alias = table.alias_or_name
-        if isinstance(table_expr, exp.Table):
-            table_counts[table_expr.name] += 1
-            if alias == table_expr.name:
-                # Safe to remove redundant alias
-                table.replace(table_expr)
-                table_aliases[alias] = None
-            else:
-                table_aliases[alias] = table_expr.name
+    # Step 1: Remove redundant table aliases
+    for table_alias in expr.find_all(exp.TableAlias):
+        table_expr = table_alias.this
+        alias_expr = table_alias.alias
 
-    # Step 2: Remove redundant prefixes from column references
+        if isinstance(table_expr, exp.Table) and alias_expr:
+            table_name = table_expr.name
+            alias_name = alias_expr.name
+
+            if table_name == alias_name:
+                alias_mapping[alias_name] = True
+                table_alias.replace(table_expr)
+
+    # Step 2: Remove table prefixes from column references
     for col in expr.find_all(exp.Column):
-        table_part = col.table
-        column_name = col.name
+        if col.table in alias_mapping:
+            col.set("table", None)
 
-        if table_part and table_aliases.get(table_part) is None:
-            # Strip the table prefix
-            col.replace(exp.to_identifier(column_name))
+    # Step 3: Remove column aliases where name == column name
+    for col_alias in expr.find_all(exp.Alias):
+        if isinstance(col_alias.this, exp.Column):
+            column = col_alias.this
+            if col_alias.name == column.name:
+                col_alias.replace(column)
 
     return expr
