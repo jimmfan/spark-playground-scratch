@@ -1,26 +1,31 @@
 import sqlglot
-from sqlglot import exp
+from sqlglot import exp, parse_one
+from collections import defaultdict
 
-def remove_redundant_aliases(expression):
-    for table in expression.find_all(exp.Alias):
-        if isinstance(table.this, exp.Table) and table.alias == table.this.name:
-            table.replace(table.this)
-    return expression
+def remove_redundant_aliases(expr):
+    table_aliases = {}
+    table_counts = defaultdict(int)
 
-sql = """
-WITH cte_table AS (
-    SELECT cte_table.col1 AS col1
-    FROM schema.table AS cte_table
-)
-SELECT * FROM cte_table
-"""
+    # Step 1: Find all table aliases
+    for table in expr.find_all(exp.TableAlias):
+        table_expr = table.this
+        alias = table.alias_or_name
+        if isinstance(table_expr, exp.Table):
+            table_counts[table_expr.name] += 1
+            if alias == table_expr.name:
+                # Safe to remove redundant alias
+                table.replace(table_expr)
+                table_aliases[alias] = None
+            else:
+                table_aliases[alias] = table_expr.name
 
-# Parse and optimize
-parsed = sqlglot.parse_one(sql)
-optimized = sqlglot.optimizer.optimize(parsed)
+    # Step 2: Remove redundant prefixes from column references
+    for col in expr.find_all(exp.Column):
+        table_part = col.table
+        column_name = col.name
 
-# Apply alias cleanup
-cleaned = remove_redundant_aliases(optimized)
+        if table_part and table_aliases.get(table_part) is None:
+            # Strip the table prefix
+            col.replace(exp.to_identifier(column_name))
 
-# Print cleaned SQL
-print(cleaned.sql())
+    return expr
