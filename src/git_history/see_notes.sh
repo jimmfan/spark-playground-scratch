@@ -23,3 +23,19 @@ done
 
 # Push the cleaned-up notes to GitHub
 git push origin refs/notes/commits
+
+
+# Delete based on text:
+
+PATTERN="rc"
+
+git notes list | while read _note commit; do
+  note_content=$(git notes show "$commit" 2>/dev/null)
+  if echo "$note_content" | grep -qi "$PATTERN"; then
+    echo "Deleting note on commit $commit"
+    git notes remove "$commit"
+  fi
+done
+
+# Push updated notes to GitHub
+git push origin refs/notes/commits
