@@ -1,2 +1,25 @@
-git for-each-ref --sort=creatordate --format '%(creatordate:iso) %(refname:strip=2)' refs/tags \
-  | awk '$1 >= "2024-06-01"'
+# Dry Run
+CUTOFF_DATE="2025-05-01"
+
+git notes list | while read _note commit; do
+  commit_date=$(git show -s --format=%ci "$commit" | cut -d' ' -f1)
+  if [[ "$commit_date" > "$CUTOFF_DATE" ]]; then
+    echo "Would delete note on commit $commit (date: $commit_date)"
+  fi
+done
+
+
+# Actual code
+
+CUTOFF_DATE="2025-05-01"
+
+git notes list | while read _note commit; do
+  commit_date=$(git show -s --format=%ci "$commit" | cut -d' ' -f1)
+  if [[ "$commit_date" > "$CUTOFF_DATE" ]]; then
+    echo "Deleting note on commit $commit (date: $commit_date)"
+    git notes remove "$commit"
+  fi
+done
+
+# Push the cleaned-up notes to GitHub
+git push origin refs/notes/commits
