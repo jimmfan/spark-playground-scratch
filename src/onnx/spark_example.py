@@ -190,3 +190,34 @@ print("Driver:", probe_pyarrow())
 
 # Executor check (run on workers)
 print("Executors:", spark.range(1).rdd.map(lambda _: probe_pyarrow()).collect())
+
+## Another option
+from pyspark import SparkFiles
+
+# Add the ONNX model to Spark job
+spark.sparkContext.addFile("hdfs:///models/mymodel.onnx")
+
+# Inside UDF / executor:
+import onnxruntime as ort
+
+def load_onnx_session():
+    local_path = SparkFiles.get("mymodel.onnx")
+    return ort.InferenceSession(local_path)
+
+from pyspark.sql.functions import udf
+from pyspark.sql.types import DoubleType
+
+# Executor-local cache
+_onnx_sess = None
+
+def predict_proba_udf(*cols):
+    global _onnx_sess
+    if _onnx_sess is None:
+        _onnx_sess = load_onnx_session()
+    X = [[float(c) if c is not None else 0.0 for c in cols]]
+    inputs = { _onnx_sess.get_inputs()[0].name: X }
+    preds = _onnx_sess.run(None, inputs)[0]
+    return float(preds[0][1])
+
+score_udf = udf(predict_proba_udf, DoubleType())
+df_scored = df.withColumn("score", score_udf("f1", "f2", "f3"))
