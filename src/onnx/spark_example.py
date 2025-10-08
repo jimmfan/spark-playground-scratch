@@ -159,3 +159,34 @@ df_scored = (
 
 # sanity check
 df_scored.select("score").show(10, truncate=False)
+
+
+# Option 4:
+# In a CDSW terminal or notebook "!" cell
+# python3 -m venv /tmp/spark24_env
+# /tmp/spark24_env/bin/pip install -U pip
+# /tmp/onnxrt_env/bin/pip install "pyarrow==0.15.1" "pandas==0.25.3" "onnxruntime==1.14.1"
+
+# # Pack it so Spark can distribute it to executors
+# cd /tmp && tar -czf spark24_env.tar.gz spark24_env
+
+
+# hdfs dfs -mkdir -p /user/$USER/deps
+# hdfs dfs -put -f /tmp/spark24_env.tar.gz /user/$USER/deps/
+
+
+## Debug
+
+def probe_pyarrow():
+    try:
+        import pyarrow, pandas, sys
+        return f"OK: pyarrow={pyarrow.__version__}, pandas={pandas.__version__}, python={sys.version.split()[0]}"
+    except Exception as e:
+        import traceback
+        return f"ERROR: {repr(e)}\n{traceback.format_exc()}"
+
+# Driver check
+print("Driver:", probe_pyarrow())
+
+# Executor check (run on workers)
+print("Executors:", spark.range(1).rdd.map(lambda _: probe_pyarrow()).collect())
