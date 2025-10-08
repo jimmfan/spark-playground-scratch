@@ -104,3 +104,58 @@ def score_row(*cols):
 score_udf = udf(score_row, DoubleType())
 
 df_scored = df.withColumn("score", score_udf("f1", "f2", "f3"))
+
+
+# Option 3
+
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, LongType, DoubleType
+import numpy as np
+
+onnx_hdfs_path = "hdfs:///user/you/models/my_model.onnx"
+feature_cols = ["f1","f2","f3"]
+TARGET_PROB_INDEX = 1
+
+spark.sparkContext.addFile(onnx_hdfs_path)
+
+# Add a stable row id to re-join scores
+df_idx = df.withColumn("_row_id", F.monotonically_increasing_id())
+feat_df = df_idx.select("_row_id", *[F.col(c) for c in feature_cols])
+
+def score_partition(rows_iter):
+    # Runs on executor; safe to import and create session here
+    from pyspark import SparkFiles
+    import onnxruntime as ort
+
+    model_path = SparkFiles.get("my_model.onnx")
+    sess = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+    input_name = sess.get_inputs()[0].name
+
+    for row in rows_iter:
+        # row is a pyspark.sql.Row
+        rid = row["_row_id"]
+        vals = [row[c] for c in feature_cols]
+        X = np.array([vals], dtype="float32")
+        out = sess.run(None, {input_name: X})[0]
+        if out.ndim == 1:
+            p = float(out[0])
+        else:
+            idx = TARGET_PROB_INDEX if TARGET_PROB_INDEX < out.shape[1] else min(1, out.shape[1]-1)
+            p = float(out[0, idx])
+        yield (rid, p)
+
+scores_rdd = feat_df.rdd.mapPartitions(score_partition)
+
+scores_schema = StructType([
+    StructField("_row_id", LongType(), False),
+    StructField("score", DoubleType(), True),
+])
+scores_df = spark.createDataFrame(scores_rdd, scores_schema)
+
+df_scored = (
+    df_idx.join(scores_df, on="_row_id", how="inner")
+          .drop("_row_id")
+)
+
+# sanity check
+df_scored.select("score").show(10, truncate=False)
