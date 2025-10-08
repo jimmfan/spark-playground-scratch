@@ -84,3 +84,23 @@ df_scored = df.withColumn("score", score_onnx(*[df[c] for c in feature_cols]))
 
 # (Optional) Quick sanity check
 df_scored.select("score").show(10, truncate=False)
+
+
+
+## Option 2
+from pyspark.sql.functions import udf
+from pyspark.sql.types import DoubleType
+import onnxruntime as ort
+import numpy as np
+
+# Initialize ONNX session once
+sess = ort.InferenceSession("/path/to/model.onnx")
+input_name = sess.get_inputs()[0].name
+
+def score_row(*cols):
+    X = np.array([cols], dtype="float32")
+    probs = sess.run(None, {input_name: X})[0]
+    return float(probs[0][1])  # for binary
+score_udf = udf(score_row, DoubleType())
+
+df_scored = df.withColumn("score", score_udf("f1", "f2", "f3"))
