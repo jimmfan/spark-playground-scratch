@@ -221,3 +221,5 @@ def predict_proba_udf(*cols):
 
 score_udf = udf(predict_proba_udf, DoubleType())
 df_scored = df.withColumn("score", score_udf("f1", "f2", "f3"))
+
+
