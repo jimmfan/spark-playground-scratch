@@ -122,3 +122,35 @@ for out in onnx_outputs:
 
 print("ONNX probs (first 5):", np.round(probs[:5, 1], 6) if probs is not None else "inspect outputs")
 print("sklearn probs (first 5):", np.round(model.predict_proba(X_test)[:5, 1], 6))
+
+
+## Feeds helper
+import numpy as np
+import pandas as pd
+import onnxruntime as ort
+
+def make_onnx_feeds(df: pd.DataFrame, session: ort.InferenceSession):
+    """
+    Build an ONNX Runtime feed dictionary automatically from a pandas DataFrame
+    and an InferenceSession (so we know the expected input names and types).
+
+    - Numeric ONNX inputs → float32
+    - String ONNX inputs  → str
+    """
+    feeds = {}
+    for inp in session.get_inputs():
+        name = inp.name
+        onnx_type = inp.type.lower()
+
+        # Fallback: pick matching column (case-insensitive)
+        col = next((c for c in df.columns if c.lower() == name.lower()), None)
+        if col is None:
+            raise KeyError(f"No column found in DataFrame for ONNX input '{name}'")
+
+        arr = df[[col]].values
+        if "float" in onnx_type or "double" in onnx_type:
+            arr = arr.astype(np.float32)
+        else:
+            arr = arr.astype(str)
+        feeds[name] = arr
+    return feeds
