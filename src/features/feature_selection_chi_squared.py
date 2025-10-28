@@ -112,3 +112,26 @@ print(results_df)
 # Optional: inspect
 # ------------------------------------------------------------
 ready_df.select(filtered_col, filtered_col + "_oh", "features", "label").show(truncate=False)
+# Spark is always right about how many features actually exist
+true_len = len(chi.pValues)
+
+# If the number of labels from the StringIndexer doesn't match,
+# rebuild feature names from that true length
+if len(indexer_labels) != true_len:
+    print(f"Adjusting names: indexer_labels={len(indexer_labels)}, true={true_len}")
+    # Spark dropped or added a bucket (often 'OTHER' or baseline)
+    # Just make generic names to align lengths safely
+    cat_feature_names = [f"{filtered_col}=={lbl}" for lbl in indexer_labels[:true_len]]
+    while len(cat_feature_names) < true_len:
+        cat_feature_names.append(f"{filtered_col}==<EXTRA>")
+else:
+    cat_feature_names = [f"{filtered_col}=={lbl}" for lbl in indexer_labels]
+
+results_df = pd.DataFrame({
+    "feature": cat_feature_names,
+    "chi2_stat": chi.statistics,
+    "p_value": chi.pValues,
+    "df": chi.degreesOfFreedom
+}).sort_values("p_value")
+
+
