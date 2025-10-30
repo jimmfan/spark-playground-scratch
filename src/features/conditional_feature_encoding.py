@@ -6,16 +6,28 @@ from sklearn.preprocessing import OneHotEncoder
 import xgboost as xgb
 
 # ---- 1) Masker that takes [cat, hist_flag] -> [cat_or_nan]
+import numpy as np
+from sklearn.base import BaseEstimator, TransformerMixin
+
 class MaskCategoricalToNaN(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
+
     def transform(self, X):
-        # X is (n, 2): [categorical, hist_flag]
-        X = np.asarray(X, dtype=object)
-        cat = X[:, [0]].copy()
+        X = np.asarray(X, dtype=object)  # (n, 2): [categorical, hist_flag]
+        cat  = X[:, [0]].copy()
         mask = X[:, 1].astype(float).reshape(-1, 1)
         cat[mask[:, 0] == 1] = np.nan
-        return cat  # (n, 1)
+        return cat  # shape (n, 1)
+
+    # ✅ add this for sklearn 1.0.2 compatibility
+    def get_feature_names_out(self, input_features=None):
+        # input_features will be like ['cat_feature1', 'hist_flag'] for this branch
+        if input_features is None or len(input_features) == 0:
+            return np.array(["masked_cat"], dtype=object)
+        # name the output after the first (categorical) input
+        return np.array([input_features[0]], dtype=object)
+
 
 def build_ohe_with_mask(cat_name, categories, hist_flag_col):
     """Takes raw cat + hist_flag, masks to NaN, then OHE with fixed vocab."""
