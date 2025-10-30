@@ -18,6 +18,25 @@ def capture_at_frac(y_true, y_score, frac=0.01, tie_break=None):
     idx = order[:k]
     return float((y_true[idx] == 1).sum())
 
+def capture_rate_at_frac_norm(y_true, y_score, frac=0.01, tie_break=None):
+    """
+    Fraction of total positives (label==1) captured
+    within the top frac of scores.
+    Returns a value in [0, 1].
+    """
+    y_true = np.asarray(y_true)
+    n = len(y_score)
+    total_bads = float((y_true == 1).sum())
+    if total_bads == 0:
+        return 0.0  # avoid division by zero
+
+    k = max(1, int(np.floor(frac * n)))
+    order = _order_with_tiebreak(y_score, tie_break)
+    idx = order[:k]
+    captured_bads = float((y_true[idx] == 1).sum())
+    return captured_bads / total_bads
+
+
 def cv_head_metric_with_stability(
     model, X, y, dates, fracs=(0.01,), n_splits=5, tie_breaker=None
 ):
