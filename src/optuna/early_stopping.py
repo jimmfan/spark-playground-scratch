@@ -8,19 +8,22 @@ def objective(trial):
     subsample = trial.suggest_float("subsample", 0.5, 1.0)
     colsample_bytree = trial.suggest_float("colsample_bytree", 0.5, 1.0)
 
-    # Build model with large n_estimators
-    model = XGBClassifier(
-        objective="binary:logistic",
-        eval_metric="aucpr",
-        n_estimators=1000,        # upper bound
-        learning_rate=learning_rate,
-        max_depth=max_depth,
-        subsample=subsample,
-        colsample_bytree=colsample_bytree,
-        tree_method="hist",
-        random_state=42,
-        n_jobs=8,
-    )
+    # Collect all model hyperparams in a dict
+    model_params = {
+        "objective": "binary:logistic",
+        "eval_metric": "aucpr",
+        "n_estimators": 1000,        # upper bound
+        "learning_rate": learning_rate,
+        "max_depth": max_depth,
+        "subsample": subsample,
+        "colsample_bytree": colsample_bytree,
+        "tree_method": "hist",
+        "random_state": 42,
+        "n_jobs": 8,
+    }
+
+    model = XGBClassifier(**model_params)
+
 
     # Split train into inner-train / inner-valid *inside* the objective
     X_tr, X_val, y_tr, y_val = train_test_split(
