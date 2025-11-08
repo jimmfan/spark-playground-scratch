@@ -134,61 +134,56 @@ results_df = pd.DataFrame({
     "df": chi.degreesOfFreedom
 }).sort_values("p_value")
 
-
 from pyspark.sql import functions as F
 
 def generate_when_statement(group_df, cat_col, feature_name="feature_risk_group"):
     """
-    Generates a PySpark F.when() conditional string for grouping categories.
+    Generate a PySpark F.when() chain to map raw categories (cat_col)
+    into grouped buckets (recommended_group).
 
-    Parameters
-    ----------
-    group_df : pyspark.sql.DataFrame
-        Output from suggest_category_groups() or equivalent.
-        Must contain columns: [cat_col, recommended_group].
-    cat_col : str
-        Name of the categorical column.
-    feature_name : str
-        Desired name of the new grouped feature.
-
-    Returns
-    -------
-    str : formatted PySpark code you can copy-paste.
+    group_df must have columns:
+      - cat_col
+      - recommended_group
     """
-    # Collect mapping to driver (safe because we only need unique category names)
-    mapping = (
-        group_df.select(cat_col, "recommended_group")
+
+    # Get mapping to driver
+    pdf = (
+        group_df
+        .select(cat_col, "recommended_group")
         .distinct()
         .toPandas()
     )
 
-    # Group category values by their recommended_group
-    grouped = mapping.groupby("recommended_group")[cat_col].apply(list).to_dict()
+    # Group raw categories by recommended_group
+    grouped = pdf.groupby("recommended_group")[cat_col].apply(list).to_dict()
 
     lines = []
-    lines.append(f"# ===== COPY BELOW INTO YOUR PIPELINE =====")
+    lines.append("from pyspark.sql import functions as F")
+    lines.append("")
+    lines.append("# ===== GENERATED GROUPING LOGIC =====")
     lines.append(f"df = df.withColumn(")
     lines.append(f"    '{feature_name}',")
 
-    indent = "    " * 2
-    lines.append(f"{indent}F.when(")
+    indent = " " * 4
+    first = True
 
-    # Build chained F.when expressions
-    whens = []
     for grp, vals in grouped.items():
-        # escape single quotes for safety
-        vals_clean = [v.replace(\"'\", \"\\'\") for v in vals]
-        condition = f\"F.col('{cat_col}').isin({vals_clean})\"
-        whens.append(f\"{indent*2}{condition}, F.lit('{grp}')\")
+        # build a valid Python list literal of strings
+        vals_literal = "[" + ", ".join(repr(v) for v in vals) + "]"
+        cond = f"F.col('{cat_col}').isin({vals_literal})"
 
-    # Join all F.when conditions with .when() chaining
-    when_chain = f\"\\n{indent*2}).when(\\n\".join(whens)
-    lines.append(when_chain)
-    lines.append(f\"{indent*2}F.lit('OTHER'))  # fallback default group\")
+        if first:
+            lines.append(f"{indent}F.when({cond}, F.lit('{grp}'))")
+            first = False
+        else:
+            lines.append(f"{indent}.when({cond}, F.lit('{grp}'))")
 
-    lines.append(f\")  # end withColumn\n# =========================================\")
+    # default / fallback
+    lines.append(f"{indent}.otherwise(F.lit('OTHER'))")
+    lines.append(")")
+    lines.append("# ===================================")
 
-    return \"\\n\".join(lines)
+    return "\n".join(lines)
 
 # assume you already ran:
 result = suggest_category_groups(df, cat_col="merchant_category", label_col="label")
