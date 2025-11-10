@@ -29,3 +29,20 @@ print(X_pre_df.dtypes.value_counts())
 print("\nColumns that are not numeric dtypes in preprocessed data:")
 non_num_pre = X_pre_df.select_dtypes(exclude=[np.number]).columns.tolist()
 print(non_num_pre)
+
+
+# True where the value is actually a Python str
+str_mask = X_pre_df.applymap(lambda v: isinstance(v, str))
+
+# Which columns have any strings?
+bad_cols = str_mask.any(axis=0)
+print("\nColumns that contain at least one string value:")
+print(X_pre_df.columns[bad_cols].tolist())
+
+# Which rows have any strings?
+bad_rows = str_mask.any(axis=1)
+print("\nNumber of rows that contain at least one string value:", bad_rows.sum())
+
+# Show a small sample of the offending cells
+print("\nSample of offending values (strings) in the preprocessed matrix:")
+print(X_pre_df.loc[bad_rows, bad_cols].head())
