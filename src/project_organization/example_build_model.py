@@ -3,38 +3,18 @@
 # ================================
 import pandas as pd
 
-
 def apply_conditional_mask(
     df: pd.DataFrame,
     condition_col: str,
     keep_values,
     cols_to_mask,
-) -> pd.DataFrame:
-    """
-    Mask categorical columns based on a condition column.
-
-    Example:
-      condition_col = "hit_type"
-      keep_values = ["AUTH", "PRESENTMENT"]
-      cols_to_mask = list of categorical feature columns
-
-    Rows where df[condition_col] NOT in keep_values:
-      - cols_to_mask are set to None (letting OHE treat them as missing).
-    """
-    if not isinstance(df, pd.DataFrame):
-        raise TypeError(f"apply_conditional_mask expects DataFrame, got {type(df)}")
-
-    missing = [c for c in list(cols_to_mask) + [condition_col] if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing columns in apply_conditional_mask: {missing}")
-
+):
     out = df.copy()
     mask = ~out[condition_col].isin(keep_values)
-
     for col in cols_to_mask:
-        out.loc[mask, col] = None  # preferred over a fake mask_value
-
+        out.loc[mask, col] = None
     return out
+
 
 
 # ================================
