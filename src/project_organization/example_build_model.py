@@ -1,102 +1,114 @@
-# ================================
-# File: src/credit_model/features/masking.py
-# ================================
+# src/credit_model/features/masking.py
+
 import pandas as pd
+from typing import Sequence, Iterable
+
 
 def apply_conditional_mask(
     df: pd.DataFrame,
     condition_col: str,
-    keep_values,
-    cols_to_mask,
-):
-    out = df.copy()
-    mask = ~out[condition_col].isin(keep_values)
+    keep_values: Iterable,
+    cols_to_mask: Sequence[str],
+    inplace: bool = False,
+) -> pd.DataFrame:
+    """
+    Mask selected columns when condition_col is NOT in keep_values.
+
+    Example:
+        condition_col = "hit_type"
+        keep_values = ["AUTH", "PRESENTMENT"]
+        cols_to_mask = ["merchant_category", "channel"]
+
+    Any row where df[condition_col] not in keep_values will get
+    None for each column in cols_to_mask.
+
+    Notes:
+      - No data validation here on purpose (you asked to keep it lean).
+      - Caller is responsible for ensuring columns exist.
+    """
+    if not inplace:
+        df = df.copy()
+
+    mask = ~df[condition_col].isin(keep_values)
     for col in cols_to_mask:
-        out.loc[mask, col] = None
-    return out
+        df.loc[mask, col] = None
+
+    return df
 
 
+# src/credit_model/features/ohe.py
 
-# ================================
-# File: src/credit_model/features/ohe.py
-# ================================
+from typing import Dict, List, Optional
+
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 
 
-def make_ohe(sparse: bool = False, dtype: str = "float32") -> OneHotEncoder:
-    """
-    Factory for OneHotEncoder so you can centralize config.
-    """
-    return OneHotEncoder(
-        handle_unknown="ignore",  # critical for stability in prod
-        sparse=sparse,
-        dtype=dtype,
-    )
-
-
 def build_ohe_preprocessor(
-    categorical_cols,
-    numeric_cols,
+    numeric_cols: List[str],
+    categorical_cols: List[str],
+    category_map: Optional[Dict[str, List[str]]] = None,
     sparse: bool = False,
     dtype: str = "float32",
 ) -> ColumnTransformer:
     """
-    ColumnTransformer that:
-      - applies OHE to categorical_cols
-      - passes numeric_cols through
-      - drops everything else (e.g. hit_type)
+    Build a ColumnTransformer with:
+      - numeric_cols passed through
+      - categorical_cols one-hot encoded
+
+    Parameters
+    ----------
+    numeric_cols : list[str]
+        Numeric feature names.
+    categorical_cols : list[str]
+        Categorical feature names, in the order they appear in the input df.
+    category_map : dict[str, list[str]] or None
+        Optional. Maps column name -> ordered category list.
+        If None, OneHotEncoder learns categories from data.
+        If not None, we pass categories in the same order as categorical_cols.
+        (No validation checks – caller is responsible for consistency.)
+    sparse : bool
+        Whether OHE output should be sparse.
+    dtype : str
+        Output dtype of OHE.
     """
-    ohe = make_ohe(sparse=sparse, dtype=dtype)
+
+    if category_map is None:
+        categories = "auto"
+    else:
+        # Just trust the caller that keys and order match — no checks.
+        categories = [category_map[col] for col in categorical_cols]
+
+    ohe = OneHotEncoder(
+        handle_unknown="ignore",
+        sparse=sparse,
+        dtype=dtype,
+        categories=categories,
+    )
 
     preprocessor = ColumnTransformer(
         transformers=[
-            ("cat", ohe, list(categorical_cols)),
-            ("num", "passthrough", list(numeric_cols)),
+            ("num", "passthrough", numeric_cols),
+            ("cat", ohe, categorical_cols),
         ],
         remainder="drop",
     )
+
     return preprocessor
 
+# src/credit_model/model/pipeline.py
 
-# ================================
-# File: src/credit_model/model/train_xgb_pipeline.py
-# ================================
-from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
-import joblib
-import numpy as np
-import pandas as pd
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
-from skl2onnx import convert_sklearn
-from skl2onnx.common.data_types import FloatTensorType, StringTensorType
-
-from credit_model.features.masking import apply_conditional_mask
 from credit_model.features.ohe import build_ohe_preprocessor
 
 
-def get_project_root() -> Path:
+def build_xgb_model(xgb_params: Optional[Dict[str, Any]] = None) -> XGBClassifier:
     """
-    Resolve repo root based on this file's location.
-
-    Assumes:
-      repo_root/
-        src/
-          credit_model/
-            model/
-              train_xgb_pipeline.py  <-- this file
-
-    So repo_root = parents[3].
-    """
-    return Path(__file__).resolve().parents[3]
-
-
-def build_xgb_model(params: Dict[str, Any]) -> XGBClassifier:
-    """
-    XGBClassifier factory with stable defaults.
+    Build an XGBClassifier with defaults that you can override via xgb_params.
     """
     defaults = {
         "n_estimators": 300,
@@ -111,83 +123,94 @@ def build_xgb_model(params: Dict[str, Any]) -> XGBClassifier:
         "random_state": 42,
         "eval_metric": "logloss",
     }
-    defaults.update(params or {})
+    if xgb_params:
+        defaults.update(xgb_params)
     return XGBClassifier(**defaults)
 
 
-def build_pipeline_for_onnx(preprocessor, model) -> Pipeline:
+def build_xgb_ohe_pipeline(
+    numeric_cols: List[str],
+    categorical_cols: List[str],
+    category_map: Optional[Dict[str, List[str]]] = None,
+    xgb_params: Optional[Dict[str, Any]] = None,
+    ohe_sparse: bool = False,
+    ohe_dtype: str = "float32",
+) -> Pipeline:
     """
-    Pipeline whose ONNX graph will contain:
+    Build and return a sklearn Pipeline consisting of:
+      - 'preprocess': ColumnTransformer (numeric passthrough + OHE)
+      - 'model': XGBClassifier
 
-      - preprocess: ColumnTransformer(OneHotEncoder + numeric passthrough)
-      - model: XGBClassifier
+    No fitting, no saving, no YAML parsing.
+    Caller is responsible for:
+      - masking
+      - fitting (.fit)
+      - saving (joblib, ONNX, etc.)
     """
-    return Pipeline(
+
+    preprocessor = build_ohe_preprocessor(
+        numeric_cols=numeric_cols,
+        categorical_cols=categorical_cols,
+        category_map=category_map,
+        sparse=ohe_sparse,
+        dtype=ohe_dtype,
+    )
+
+    model = build_xgb_model(xgb_params)
+
+    pipe = Pipeline(
         steps=[
             ("preprocess", preprocessor),
             ("model", model),
         ]
     )
 
+    return pipe
 
-def train_and_export_with_ohe_in_onnx(
-    df: pd.DataFrame,
-    model_cfg: Dict[str, Any],
-) -> None:
-    """
-    Train and export a pipeline where ONNX contains OHE + XGB.
+# Example usage
+import yaml
+import joblib
+import numpy as np
+import pandas as pd
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import FloatTensorType, StringTensorType
 
-    Workflow:
+from credit_model.features.masking import apply_conditional_mask
+from credit_model.model.pipeline import build_xgb_ohe_pipeline
 
-      1. Mask categorical features based on hit_type (outside pipeline).
-      2. Fit ColumnTransformer (OHE + numeric passthrough) on masked data.
-      3. Transform to numeric matrix (float32).
-      4. Fit XGBClassifier.
-      5. Wrap preprocessor + model into a Pipeline.
-      6. Save Pipeline as joblib.
-      7. Convert Pipeline to ONNX (includes OHE + XGB).
 
-    `model_cfg` is the `model` section from model.yaml.
-    """
+def main():
+    # 1) Load config (if you want)
+    with open("configs/model.yaml") as f:
+        full_cfg = yaml.safe_load(f)
+    model_cfg = full_cfg["model"]
 
-    # --- unpack config ---
     target = model_cfg["target"]
+    cols_cfg = model_cfg["columns"]
+    numeric_cols = cols_cfg["numeric"]
+    categorical_cols = cols_cfg["categorical"]
+    hit_type_col = cols_cfg["hit_type"]
 
-    columns_cfg = model_cfg["columns"]
-    categorical_cols = columns_cfg["categorical"]
-    numeric_cols = columns_cfg["numeric"]
-    hit_type_col = columns_cfg["hit_type"]
-
-    masking_cfg = model_cfg["masking"]
-    keep_hit_types = masking_cfg["allowed_hit_types"]
+    mask_cfg = model_cfg["masking"]
+    keep_hit_types = mask_cfg["allowed_hit_types"]
 
     ohe_cfg = model_cfg["preprocessing"]["ohe"]
     ohe_sparse = ohe_cfg["sparse"]
     ohe_dtype = ohe_cfg["dtype"]
+    category_map = ohe_cfg.get("category_map")  # dict or None
 
-    algo_params = model_cfg["algorithm"]["params"]
+    xgb_params = model_cfg["algorithm"]["params"]
 
-    export_cfg = model_cfg["export"]
-    model_dir_rel = export_cfg["model_dir"]      # e.g. "models/deposit_hold_xgb"
-    model_name = export_cfg["model_name"]       # e.g. "deposit_hold_xgb_v1"
-    save_joblib = export_cfg.get("save_joblib", True)
-    save_onnx = export_cfg.get("save_onnx", True)
-
-    # --- resolve model directory relative to project root ---
-    project_root = get_project_root()
-    model_dir = project_root / model_dir_rel
-    model_dir.mkdir(parents=True, exist_ok=True)
-
-    # --- split X, y ---
+    # 2) Load data
+    df = pd.read_parquet("data/training.parquet")
     y = df[target].values
     X_raw = df.drop(columns=[target])
 
-    # enforce numeric columns as float32 (helps sklearn ↔ ONNX drift)
+    # optional: force float32 on numeric cols
     for col in numeric_cols:
-        if col in X_raw.columns:
-            X_raw[col] = X_raw[col].astype("float32")
+        X_raw[col] = X_raw[col].astype("float32")
 
-    # --- 1) apply conditional masking OUTSIDE the pipeline ---
+    # 3) Apply masking OUTSIDE the pipeline
     X_masked = apply_conditional_mask(
         X_raw,
         condition_col=hit_type_col,
@@ -195,66 +218,31 @@ def train_and_export_with_ohe_in_onnx(
         cols_to_mask=categorical_cols,
     )
 
-    # --- 2) build + fit OHE preprocessor ---
-    preprocessor = build_ohe_preprocessor(
-        categorical_cols=categorical_cols,
+    # 4) Build pipeline and fit
+    pipe = build_xgb_ohe_pipeline(
         numeric_cols=numeric_cols,
-        sparse=ohe_sparse,
-        dtype=ohe_dtype,
+        categorical_cols=categorical_cols,
+        category_map=category_map,
+        xgb_params=xgb_params,
+        ohe_sparse=ohe_sparse,
+        ohe_dtype=ohe_dtype,
     )
 
-    preprocessor.fit(X_masked)
+    pipe.fit(X_masked, y)
 
-    # --- 3) transform to numeric matrix (float32) ---
-    X_processed = preprocessor.transform(X_masked)
-    if hasattr(X_processed, "astype"):
-        X_processed = X_processed.astype(np.float32)
-    else:
-        X_processed = np.asarray(X_processed, dtype=np.float32)
-
-    # --- 4) build + fit XGB model ---
-    model = build_xgb_model(algo_params)
-    model.fit(X_processed, y)
-
-    # --- 5) build sklearn Pipeline for joblib + ONNX ---
-    pipeline = build_pipeline_for_onnx(preprocessor, model)
-
-    # --- 6) save sklearn pipeline ---
-    if save_joblib:
-        joblib_path = model_dir / f"{model_name}.joblib"
-        joblib.dump(pipeline, joblib_path)
-        print(f"Saved sklearn pipeline to: {joblib_path}")
-
-    # --- 7) export ONNX (OHE + XGB) ---
-    if save_onnx:
-        # ONNX expects raw input schema: each feature as its own tensor
-        initial_types = []
-        for col in categorical_cols:
-            initial_types.append((col, StringTensorType([None, 1])))
-        for col in numeric_cols:
-            initial_types.append((col, FloatTensorType([None, 1])))
-
-        onnx_model = convert_sklearn(
-            pipeline,
-            initial_types=initial_types,
-        )
-
-        onnx_path = model_dir / f"{model_name}.onnx"
-        with open(onnx_path, "wb") as f:
-            f.write(onnx_model.SerializeToString())
-        print(f"Saved ONNX pipeline (OHE + XGB) to: {onnx_path}")
+    # 5) (Optional) Save pipeline / export ONNX here if you want
+    # joblib.dump(pipe, "models/deposit_hold_xgb_v1.joblib")
+    #
+    # initial_types = []
+    # for col in categorical_cols:
+    #     initial_types.append((col, StringTensorType([None, 1])))
+    # for col in numeric_cols:
+    #     initial_types.append((col, FloatTensorType([None, 1])))
+    #
+    # onnx_model = convert_sklearn(pipe, initial_types=initial_types)
+    # with open("models/deposit_hold_xgb_v1.onnx", "wb") as f:
+    #     f.write(onnx_model.SerializeToString())
 
 
 if __name__ == "__main__":
-    # Example usage (pseudo-code; wire this in your real entrypoint):
-    #
-    # import yaml
-    #
-    # with open("configs/model.yaml") as f:
-    #     full_cfg = yaml.safe_load(f)
-    # model_cfg = full_cfg["model"]
-    #
-    # df = pd.read_parquet("data/training.parquet")
-    # train_and_export_with_ohe_in_onnx(df, model_cfg)
-    #
-    pass
+    main()
