@@ -14,8 +14,8 @@ def download_from_artifactory(artifactory_url: str, repo_path: str, local_path: 
     full_url = f"{artifactory_url.rstrip('/')}/{repo_path.lstrip('/')}"
     remote = ArtifactoryPath(full_url, auth=(user, password))
 
-    # Using two separate context managers (cleaner than one line)
-    with remote.open("rb") as remote_file:
+    # For artifactory 0.1.17, use open() without mode argument
+    with remote.open() as remote_file:
         data = remote_file.read()
 
     local_path.write_bytes(data)

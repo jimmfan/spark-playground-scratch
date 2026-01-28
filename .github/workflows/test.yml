@@ -1,0 +1,12 @@
+- uses: actions/setup-python@v5
+  with: 
+    python-version: '3.7"
+  env:
+    AGENT_TOOLSDIRECTORY: "/opt/hostedtoolcache" 
+
+- name: Install dependency
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y libkrb5-dev libsasl2-dev libsas12-2 libsasl2-modules-gssapi-mit build-essential pkg-config
+    python3 -m pip install setuptools==57.5.0 --index-url=https://some_self_hosted_pypi.com
+    python3 -m pip install twine --index-url=https://some_self_hosted_pypi.com

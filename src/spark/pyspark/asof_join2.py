@@ -5,7 +5,9 @@ def _map_literal_dates(dct):
     for k, v in dct.items():
         kv += [F.lit(k).cast("date"), F.lit(v).cast("date")]
     return F.create_map(*kv)
+In my training dataset, I create a lookback feature_date column in pyspark:
 
+F.create_map
 def join_prev_bday_with_map_keys(
     df_population,
     df_features,

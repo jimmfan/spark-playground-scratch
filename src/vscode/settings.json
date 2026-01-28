@@ -1,0 +1,22 @@
+{
+  // Use the project venv for Python files, linting, testing, etc.
+  "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+
+  // Don't auto-activate a different env; we explicitly use .venv
+  "python.terminal.activateEnvironment": false,
+
+  // Python extension env vars (Run Python File, debug, tests, Interactive Window)
+  "python.envFile": "${workspaceFolder}\\.vscode\\.env",
+
+  // Terminal-only env vars (uv / shell commands)
+  "terminal.integrated.env.windows": {
+    // Force uv to use Python 3.11 when creating/syncing .venv
+    "UV_PYTHON": "C:\\Program Files\\Python311\\python.exe",
+
+    // Make terminal commands like python/pip/pytest resolve to .venv first
+    "PATH": "${workspaceFolder}\\.venv\\Scripts;${env:PATH}"
+  },
+
+  // (Optional but helpful) Keep VS Code from picking a random kernel
+  "jupyter.jupyterServerType": "local"
+}
