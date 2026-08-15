@@ -39,4 +39,6 @@ At the end, report:
 - and what the logical next step should be.
 
 
-“Determine from the existing decisions and project state what the next actionable unit of work should be. If that requires further discovery, decomposition, research, or resolution of an unknown, do that as appropriate. If enough is already known to implement something safely, proceed with implementation
+“Determine from the existing decisions and project state what the next actionable unit of work should be. If that requires further discovery, decomposition, research, or resolution of an unknown, do that as appropriate. If enough is already known to implement something safely, proceed with implementation"
+
+“I want the first executable infrastructure artifact in this repository. Determine from the existing project decisions what can safely be implemented now. Research any external technical facts you need. Do not modify or invent unresolved organizational decisions. Implement the smallest useful executable artifact that does not depend on those decisions, validate it, and review the result. If nothing can safely be implemented, explain exactly what blocks implementation rather than creating placeholder infrastructure.”
