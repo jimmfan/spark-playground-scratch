@@ -37,3 +37,6 @@ At the end, report:
 - what changed,
 - what verification was performed,
 - and what the logical next step should be.
+
+
+“Determine from the existing decisions and project state what the next actionable unit of work should be. If that requires further discovery, decomposition, research, or resolution of an unknown, do that as appropriate. If enough is already known to implement something safely, proceed with implementation
