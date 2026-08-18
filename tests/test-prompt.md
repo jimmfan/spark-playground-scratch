@@ -41,4 +41,58 @@ At the end, report:
 
 “Determine from the existing decisions and project state what the next actionable unit of work should be. If that requires further discovery, decomposition, research, or resolution of an unknown, do that as appropriate. If enough is already known to implement something safely, proceed with implementation"
 
-“I want the first executable infrastructure artifact in this repository. Determine from the existing project decisions what can safely be implemented now. Research any external technical facts you need. Do not modify or invent unresolved organizational decisions. Implement the smallest useful executable artifact that does not depend on those decisions, validate it, and review the result. If nothing can safely be implemented, explain exactly what blocks implementation rather than creating placeholder infrastructure.”
+
+
+
+
+Migrate this project's existing Wayfinder state to the current Agentic Workflow Wayfinder contract.
+
+The framework has changed from the older U#/D#/T# model. Wayfinder no longer owns T# implementation tickets.
+
+The current model is:
+
+- "map.md" — current state, blockers, dependencies, navigation, and smallest coherent next work
+- "unknowns/" / U# — unresolved consequential questions
+- "evidence/" / E# — independently valuable observations/findings with provenance
+- "facts/" / F# — sufficiently established durable descriptive conclusions
+- "decisions/" / D# — committed choices
+
+Wayfinder state should remain sparse. "map.md" alone is valid. Do not create E#/F#/U#/D# artifacts merely to populate the structure.
+
+Please inspect the repository's current framework contract and existing Wayfinder state before making changes. Treat the installed/current Wayfinder contract as authoritative.
+
+For each existing Wayfinder effort:
+
+1. Inspect its "map.md", U#, D#, T#, and other existing state.
+2. Preserve existing project knowledge and history. Do not invent facts, evidence, decisions, or requirements.
+3. Move the live status, blockers, dependencies, and smallest coherent next action formerly represented by T# into "map.md".
+4. Preserve independently valuable unresolved questions as U#.
+5. Create E# or F# only when the existing state contains information that clearly belongs there and preserving it independently is useful.
+6. Preserve valid D# decisions.
+7. Remove active T# references from "map.md".
+8. If remaining work genuinely requires substantial/dependency-aware decomposition, use or point to the framework's "to-tickets" workflow rather than creating Wayfinder T# artifacts.
+9. Do not mechanically convert T# → F#, D#, E#, or U#. Classify information by meaning.
+10. Do not delete historical project-owned "tickets/" content unless the current contract explicitly requires deletion. Prefer preserving obsolete T# artifacts as historical/legacy state when safe.
+11. Do not modify frozen benchmark/evaluation artifacts merely to conform them to the new model.
+12. Do not create a README or additional state structure unless the current framework contract requires it.
+
+After migration, verify that:
+
+- active Wayfinder state follows the current contract;
+- no active "map.md" depends on T#;
+- Wayfinder is not being used as an implementation ticket system;
+- existing important knowledge was not lost;
+- next work remains clear enough for a fresh agent/session to resume;
+- no unnecessary U#/E#/F#/D# artifacts were created.
+
+Before finishing, review the diff specifically for accidental loss or reinterpretation of project-owned state.
+
+Then summarize:
+
+- what you migrated;
+- what happened to each old T#;
+- any E#/F# artifacts you created and why they justified separate durable state;
+- any legacy T# files/directories intentionally preserved;
+- anything ambiguous that you intentionally did not change.
+
+Do not redesign the framework itself. This task is only to migrate this consuming project's durable Wayfinder state to the framework's current contract.
