@@ -106,3 +106,37 @@ Pay particular attention to false certainty: inference recorded as fact, recomme
 Validate questionable claims using the minimum sufficient method. Inspect repository source/tests/artifacts for repository claims. Use Research only when external primary-source evidence is actually required; do not use it to validate claims the repository can establish.
 Report only meaningful findings, grouped by effort, with the file/item, problem, supporting evidence, and recommended correction. Do not manufacture findings. Finish with an overall assessment of whether the Wayfinder state is trustworthy and whether any recurring/systemic problem exists.
 Do not implement fixes.
+
+
+## next prompt
+Audit all efforts under ".agent-wayfinder/" for the quality of the project's planning state. The project is still pre-implementation, so evaluate the state as planning knowledge rather than against nonexistent runtime behavior. This is read-only; do not modify files.
+
+Use the installed Wayfinder contract, explicit human/project authority, requirements, accepted project artifacts, and properly supported external evidence as the standard.
+
+Assess whether:
+
+- facts are genuinely established rather than assumptions or inference;
+- decisions are actually adopted choices, have the required authority, and are not presented as better-supported than their rationale/evidence warrants;
+- unknowns capture consequential unresolved questions without prematurely resolving them;
+- evidence actually supports the claims that depend on it;
+- maps accurately represent the project's current planning state, dependencies, blockers, and frontier;
+- important consequential unknowns, assumptions, dependencies, or decisions appear to be missing;
+- Wayfinder records contradict or unnecessarily duplicate canonical project artifacts;
+- child records still have independent navigational value or should have been settled.
+
+Pay particular attention to false certainty. Do not treat agreement among agent-created documents as independent evidence; trace important claims back to the actual authority, requirement, observation, or evidence that justifies them.
+
+Use the minimum sufficient validation method. Use Research only for material external factual or technical uncertainty that genuinely requires primary-source evidence. External research cannot substitute for human/project authority.
+
+Do not redesign the project or reopen sound decisions merely because another reasonable choice exists.
+
+Report only meaningful findings, grouped by effort, with the affected item, why it is questionable, what actually supports or contradicts it, and the recommended correction or question to resolve. Also identify consequential missing state when there is concrete evidence that something important has been overlooked.
+
+Finish with:
+
+- whether the planning state is broadly trustworthy;
+- the highest-risk findings;
+- any recurring/systemic Wayfinder-state problem;
+- whether the project appears sufficiently grounded to continue planning toward implementation.
+
+Do not implement fixes.
