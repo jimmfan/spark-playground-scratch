@@ -96,3 +96,13 @@ Then summarize:
 - anything ambiguous that you intentionally did not change.
 
 Do not redesign the framework itself. This task is only to migrate this consuming project's durable Wayfinder state to the framework's current contract.
+
+
+
+
+Audit all current and historical efforts under .agent-wayfinder/ for state quality. This is read-only; do not modify files.
+Use the installed Wayfinder contract and current authoritative repository state as the standard. Check whether maps and U/E/F/D records are accurate, correctly classified, sufficiently supported, still useful, and consistent with current canonical artifacts and other efforts.
+Pay particular attention to false certainty: inference recorded as fact, recommendation recorded as decision, inconclusive evidence treated as conclusive, resolved questions still recorded as unknown, stale state, unclear authority, and children that should have been settled/retired.
+Validate questionable claims using the minimum sufficient method. Inspect repository source/tests/artifacts for repository claims. Use Research only when external primary-source evidence is actually required; do not use it to validate claims the repository can establish.
+Report only meaningful findings, grouped by effort, with the file/item, problem, supporting evidence, and recommended correction. Do not manufacture findings. Finish with an overall assessment of whether the Wayfinder state is trustworthy and whether any recurring/systemic problem exists.
+Do not implement fixes.
