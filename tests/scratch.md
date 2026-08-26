@@ -249,7 +249,7 @@ terraform {
 }
 ```
 
-The actual versions should follow company standards.
+The actual versions should follow shared standards.
 
 ### `tests/`
 
@@ -306,7 +306,7 @@ Defines or participates in configuring the dev Terraform backend/state.
 
 Dev and prod should have independent state.
 
-Exactly how backend configuration is supplied should follow the company's CI/CD/Terraform platform. Do not place credentials or secrets here.
+Exactly how backend configuration is supplied should follow the shared's CI/CD/Terraform platform. Do not place credentials or secrets here.
 
 ### `providers.tf`
 
@@ -462,7 +462,7 @@ resource requests/limits
 controller settings
 pod scheduling requirements
 service-account configuration
-company-required labels/annotations
+shared-required labels/annotations
 ```
 
 Only settings that differ from chart defaults or that should be explicitly controlled should be added.
@@ -526,7 +526,7 @@ deploy runner scale set
 validate runner
 ```
 
-These may be two pipelines or two ordered stages in the company's CI/CD platform.
+These may be two pipelines or two ordered stages in the shared's CI/CD platform.
 
 They **do not need separate repositories**.
 
@@ -568,9 +568,9 @@ The top-level README should include a small table like this:
 
 ---
 
-# Future company EKS module
+# Future  EKS module
 
-The local `eks-cluster` module also gives us a useful place to discover requirements for the future company-owned EKS module.
+The local `eks-cluster` module also gives us a useful place to discover requirements for the future -owned EKS module.
 
 Initially:
 
@@ -589,17 +589,17 @@ ARC-specific requirement
         ↓
 remains with ARC project
 
-company-wide EKS standard
+shared-wide EKS standard
         ↓
-candidate for company EKS module
+candidate for shared EKS module
 ```
 
-Later, the company module could become:
+Later, the shared module could become:
 
 ```text
-company/eks/aws
+shared/eks/aws
       ↓
-company policy + supported interface
+shared policy + supported interface
       ↓
 terraform-aws-modules/eks/aws
 ```
@@ -609,10 +609,10 @@ The ARC project could then either:
 ```text
 eks-cluster
     ↓
-company/eks/aws
+shared/eks/aws
 ```
 
-if the local wrapper still adds ARC-specific value, or call the company module directly if the local wrapper no longer serves a useful purpose.
+if the local wrapper still adds ARC-specific value, or call the shared module directly if the local wrapper no longer serves a useful purpose.
 
 The transition should be treated as an explicit Terraform migration: prove it in dev first and ensure the plan does **not unintentionally recreate the EKS cluster** before applying the same migration to prod.
 
@@ -633,4 +633,4 @@ The transition should be treated as an explicit Terraform migration: prove it in
 * Do not introduce Terragrunt or other orchestration until scale demonstrates a need.
 * Do not split ARC into another repository merely because it has a separate deployment.
 * Do not add speculative directories or abstraction layers before something actually needs them.
-* Use the dev implementation to discover requirements for the future company-owned EKS module.
+* Use the dev implementation to discover requirements for the future shared-owned EKS module.
