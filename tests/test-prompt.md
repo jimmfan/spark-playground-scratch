@@ -1,217 +1,351 @@
-Wayfinder Fact Organization
+ARC Wayfinder Reference-Inheritance Audit
 
-Proceed with the consuming-project cleanup and consolidation. Do not return another design proposal unless repository reality makes the settled target unsafe.
+Audit the durable Wayfinder state and related documentation in the current "ghec-eks-arc-runners" repository.
 
-Repository and branch
+This is an audit-only task. Do not edit, create, delete, rename, format, regenerate, stage, commit, stash, reset, check out, or push anything in any repository. Return findings and recommendations only.
 
-- Verify the exact repository, current branch, HEAD, worktree status, and intended base before editing.
-- Create and use the branch "refactor/arc-wayfinder-consolidation".
-- Preserve unrelated work.
-- Commit and push the completed changes.
-- Do not merge.
+Workspace and repository state
 
-This consuming-project migration is coordinated with a parallel Agent Workflow source change on "refactor/wayfinder-consolidated-knowledge". The user explicitly authorizes migrating this project-owned Wayfinder state to the target representation below even if the currently installed contract still describes individual F#/D# files.
+The target repository is:
 
-Do not hand-edit ".agent-workflow/", installed skill projections, or other framework-owned files. If the parallel framework change is not installed when you finish, complete the project-owned consolidation but report final framework-contract validation as pending. Do not undo the new representation merely to satisfy the old installed projection.
+ghec-eks-arc-runners/
 
-Goal
+The following sibling repositories should be available as read-only references:
 
-This project is in initial planning and has essentially no product implementation code. It is maintained by one developer, who must be able to open "map.md", understand the project’s current planning state and next questions, and drill into only a few supporting artifacts.
+../ccoe-ami/
+../aws-eks-cder/
+../aws-eks-cder-helm/
+../cder-workspaces/
 
-Preserve valuable knowledge, provenance, authority boundaries, accepted decisions, consequential unresolved questions, Jira identifiers, and hard-won analysis. Remove repetitive templates, duplicate frontier representations, and file fragmentation that do not improve navigation or continuation.
+At the beginning:
 
-Add this exact instruction to the project-owned section of "AGENTS.md", outside any framework-managed region:
+- Read all applicable "AGENTS.md", Wayfinder contracts, and repository instructions in the target repository.
+- Record the target repository’s current branch, "HEAD" SHA, working-tree status, and untracked files.
+- Record the checked-out branch and SHA of each available reference repository.
+- Treat committed "HEAD" in "ghec-eks-arc-runners" as the canonical baseline.
+- Treat any current uncommitted changes as Claude’s candidate cleanup, not as approved project truth.
+- Audit the committed baseline and the uncommitted diff separately.
+- If a reference repository is unavailable, record that limitation and continue.
+- Do not clone, fetch, pull, switch branches, or modify any repository.
+- Read-only Git inspection such as "status", "diff", "show", "log", "grep", and "rev-parse" is allowed.
 
-«Human maintainability: This project is maintained by a single developer. Keep planning, documentation, and durable state easy to understand and manage; prefer a small number of clear canonical artifacts over unnecessary file proliferation.»
+Keep progress updates brief. Put the substantive analysis in the final audit report.
 
-Target Wayfinder representation
+User intent
 
-Use this as the target unless the repository reveals a concrete reason for a small adjustment:
+ARC should begin from a smaller, minimally assumed baseline.
 
-.agent-wayfinder/arc-eks-architecture/
-├── map.md
-├── facts.md
-├── decisions.md
-├── unknowns/
-│   └── U#-<readable-name>.md
-└── evidence/
-    └── E#-capacity-analysis.md
+External and legacy repositories are useful sources of evidence, but their implementation choices must not silently become immutable ARC facts, constraints, requirements, or decisions.
 
-The exact number of surviving unknown files is not predetermined.
+In particular:
 
-- "map.md" is the everyday orientation and sole canonical frontier.
-- "facts.md" is one compact, structured current-fact ledger.
-- "decisions.md" is one compact, structured current-decision ledger.
-- A separate U# file remains only when the question’s reasoning, authority, external lead time, dependencies, consequences, or reconstruction cost materially justify independent preservation.
-- Evidence remains a separate artifact only when it is substantial, expensive to reproduce, independently reusable, or requires its own methods and limitations.
-- Preserve all existing current F#/D#/U#/E# identifiers where their underlying records survive. Do not renumber merely for neatness.
-- Retire old per-record files only after their valuable content and every current reference have been reconciled.
+- "ccoe-ami" contains important information about the existing self-hosted runner fleet.
+- ARC may later reuse parts of "ccoe-ami", but possible or likely reuse is not a decision to preserve its operating system, AMI-building process, baked toolchain, refresh schedule, Docker model, registration process, or other implementation choices.
+- The CDER/Coder repositories are prior art from an internal EKS developer-workspace platform with a different workload and behavior.
+- CDER/Coder may demonstrate that a pattern is possible or reveal an observed convention, but it is not the ARC design blueprint.
+- Literal repository names, paths, revisions, and source citations must remain truthful.
+- Replacing "CDER" or "Coder" with generic wording such as “reference environment” does not solve the problem when the underlying external assumption still governs ARC.
+- Current ARC facts should describe verified ARC conditions, material migration constraints, or independently applicable requirements.
+- Accepted ARC choices should be represented as decisions with clear status and authority.
+- Unresolved applicability, authority, or design choices should remain visibly unresolved.
+- Legacy and reference implementation details should default to non-binding evidence unless their applicability to ARC is independently established.
 
-Use the installed mutation-safety rules as far as applicable: reread affected state, serialize the effort mutation, reconcile references before removal, and never overwrite a concurrent change silently.
+The goal is not to erase useful research. The goal is to stop facts about adjacent systems from masquerading as facts or decisions about ARC.
 
-Facts and provenance
+Authority
 
-Consolidate current facts into "facts.md". Preserve the factual conclusions and exact useful citations while trimming repeated template language and duplicated context.
+Use this authority order:
 
-Use H2 sections such as:
+1. The user intent in this prompt.
+2. Current target-repository source, Git state, tests, accepted ARC architecture decisions, and explicit ARC requirements.
+3. Current statements from identified ARC owners or maintainers, with their scope and date.
+4. Reference repositories as evidence about their own implementation at a recorded revision.
+5. Inference, analogy, or hypothesis.
 
-# Facts
+A reference repository is authoritative about what it implements at a particular revision. It is not automatically authoritative about what ARC must implement.
 
-## F19 — Static credentials are prohibited
+Do not infer an organization-wide policy from a convention found in one repository.
 
-- Status: established
-- Scope: ARC production environment
-- Source: <canonical URL or repo/path:lines>
-- Authority: <named person or canonical authority artifact, date, forum>
-- Derived from: <supporting F#/E#/source and concise derivation>
-- Limitations: <material limitation, if any>
+Do not treat an architecture decision as accepted ARC authority without checking its lifecycle status, scope, and applicability.
 
-<Concise scoped conclusion.>
+Hypothesis
 
-Rules:
+Wayfinder may have promoted accurately sourced observations from "ccoe-ami", CDER/Coder repositories, and other neighboring sources into ARC facts, design direction, decisions, or documentation without adequately establishing:
 
-- Every fact must have at least one real provenance field: "Source", "Authority", or "Derived from".
-- Omit provenance fields that do not apply; do not fill them ceremonially.
-- "Source" must point to the source that actually establishes the claim.
-- Another agent-authored document is not independent evidence merely because it repeats the claim.
-- "Authority" must name the actual responsible authority or link the accepted authority artifact. Do not invent a person or forum.
-- If authority or support cannot be established, downgrade the statement or keep it unresolved rather than presenting it as an established fact.
-- Preserve scope and limitations so a Coder precedent, development observation, or environment-specific constraint is not generalized to the whole organization.
-- Working assumptions are not F# records. Put them concisely in "map.md" using "Assumed:" and "Settled by:", or retain the relevant U# when independent preservation is justified.
+- applicability to ARC,
+- governing authority,
+- migration relevance,
+- durability,
+- or explicit ARC adoption.
 
-Decisions and authority
+Some entries may also combine different kinds of claims—for example, a sourced observation about an old system followed by an inference or expected benefit for ARC—while labeling the entire entry "established".
 
-Consolidate current decisions into "decisions.md".
+Claude’s current candidate cleanup may reduce visible CDER/Coder naming without correcting these inherited assumptions.
 
-Use H2 sections such as:
+Audit scope
 
-# Decisions
+Inspect the complete current Wayfinder effort and all related target-repository material. Do not limit the review to literal occurrences of "CDER", "Coder", or "ccoe-ami".
 
-## D2 — <Committed choice>
+At minimum, inspect:
 
-- Status: accepted | provisional | superseded
-- Authority: <named person, responsible project role, or accepted authority artifact; include date and forum where applicable>
-- Based on: <links to relevant facts, evidence, unknowns, policies, or ADRs>
-- Revisit when: <required for a provisional decision; optional otherwise>
-- Consequences: <concise material consequences>
+- "facts.md"
+- "decisions.md"
+- "evidence.md"
+- "unknowns.md", open-question files, or their equivalents
+- "map.md"
+- Wayfinder contracts and instructions
+- root and infrastructure "README.md" files
+- documents under "docs/"
+- architecture-decision and reference documents
+- generated navigation or graph artifacts where relevant
+- ".github/workflows/"
+- all external repositories and files cited by the durable state
+- the complete current uncommitted diff
 
-<The choice, decisive rationale, tradeoffs, and explicit remaining uncertainty.>
+Build an inventory of every target-repository claim materially derived from an external, legacy, or neighboring project.
 
-Rules:
+For each claim, determine:
 
-- "accepted" means the current committed choice.
-- "provisional" means an authority explicitly adopted a temporary choice and supplied or accepted a revisit condition. It does not mean “the agent currently recommends this.”
-- A proposal, inferred preference, or unresolved architecture option is not a D#.
-- Evidence can support a decision but cannot supply decision authority.
-- Where D5/D6 or another decision depends on verbal authority that was not durably identified, preserve the actual state honestly. Name the authority when the repository establishes it; otherwise mark authority unresolved and do not strengthen the decision.
-- Do not settle the architecture findings from the audit merely because consolidation is authorized.
+- What does the cited source actually prove?
+- Is the claim about ARC, the existing runner fleet, a reference project, an observed convention, or a broader organizational condition?
+- Is its basis source evidence, explicit authority, an accepted decision, a proposed decision, inference, analogy, or hypothesis?
+- Was its applicability to ARC independently established?
+- Does ARC have to account for it during coexistence, migration, or cutover?
+- Could ARC validly choose a different implementation without violating a real requirement?
+- Is it durable project knowledge or a dated repository snapshot?
+- Does the entry combine an observation with an ARC inference, recommendation, expected benefit, or decision?
+- Could a future agent reasonably misread it as something ARC must preserve?
+- Is the information useful but too detailed or non-binding for the active ARC fact ledger?
 
-Evidence and capacity
+Also identify executable workflows, instructions, or other artifacts that appear copied from a reference repository without a demonstrated ARC purpose. Report them separately; do not modify or delete them.
 
-Keep one substantial capacity-analysis artifact under "evidence/", using the new contract’s E# naming and preserving an existing applicable E# when one exists.
+Classifications
 
-- Treat it as canonical capacity and sizing evidence, not a sizing decision.
-- Fold the useful caveats and source classifications from the earlier-draft evidence into it.
-- Preserve raw figures, calculations, assumptions, provenance, limitations, the demonstrated allocatable-capacity defect, pod-IP/max-pods analysis, and the distinction between rejection bounds and design values.
-- State plainly in "map.md" that no final sizing decision exists unless project authority has actually made one.
-- Do not create a generic "evidence.md" merely for symmetry.
+Use the smallest accurate classification for each item:
 
-Unknowns and current frontier
+- ARC fact: independently established and materially true for ARC.
+- ARC migration constraint: an existing condition ARC must account for during coexistence, migration, or cutover.
+- Authority-backed requirement: an applicable requirement established by an authorized owner, accepted decision, policy, or equivalent authority.
+- Accepted ARC decision: a choice explicitly selected for ARC with verified status and authority.
+- Candidate ARC choice: an option under consideration but not yet selected.
+- Legacy implementation evidence: a sourced observation about the existing runner fleet.
+- Reference-project evidence: a sourced observation about CDER/Coder or another neighboring implementation.
+- Observed convention: a pattern that may suggest a broader rule but does not prove one.
+- Inference or hypothesis: an expected implication, benefit, or conclusion that has not been verified.
+- Unknown: an unresolved question about applicability, authority, ownership, compatibility, or target behavior.
+- Volatile snapshot: versions, CIDRs, branch contents, schedules, or similar details likely to change and not backed by an authoritative current inventory.
+- Irrelevant or accidental carryover: material that does not meaningfully inform ARC.
+- Suspected copied artifact: executable or instructional content inherited without a demonstrated ARC purpose.
 
-Re-evaluate the existing U# files while preserving their substantive questions and answers.
+A statement may be fully established as true about another system while remaining non-binding for ARC.
 
-- Human-owned asks may live in "docs/open-questions.md" plus a concise map entry when a separate U# adds no additional coordination value.
-- Questions safely answerable through implementation and testing in the initial development or non-production environment should remain visible in a concise "Validate in development" section rather than appearing as parallel current blockers.
-- Keep a separate U# when the detailed analysis, owner, lead time, dependencies, or consequences warrant it.
-- Do not force the result to exactly one unknown.
-- The egress/allow-list question, account/CIDR sizing loop, and execution-mode compatibility are plausible survivors, but decide from their actual retained coordination value.
-- Preserve "open-questions.md" as the stakeholder-facing worksheet and fix its stale references.
-- "map.md" must contain one truthful current frontier and link to detail. Do not keep another authoritative frontier in the backlog, dependency graph, or tracker.
+Do not equate "Status: established" with “authoritative or binding for ARC.” Evaluate both truth and applicability.
 
-Replace unsupported uses of “pilot” with the project’s actual terminology:
+Representative cases
 
-- what must be answered before creating the initial development/non-production environment;
-- what can be validated in development;
-- what must be resolved before production or broader adoption.
+These examples calibrate the audit but do not predetermine the results and are not the complete scope.
 
-Do not investigate where the word “pilot” originally came from.
+F9–F15: existing fleet and "ccoe-ami"
 
-Coder/CDER precedent
+Determine which details are genuine ARC migration or compatibility constraints and which are only observations about the existing implementation.
 
-Remove the standalone Coder/CDER precedent record unless unique retained content genuinely earns an artifact.
+Pay particular attention to:
 
-Process its content as follows:
+- Amazon Linux 2023
+- the existing AMI and Packer process
+- weekly Auto Scaling Group refreshes
+- Docker running on the host
+- workflow job containers
+- the baked toolchain
+- GitHub OIDC usage
+- offline or zombie runner cleanup
+- claims that JIT registration will remove an operational burden
 
-- Verified organizational constraints may enter "facts.md", but only with their real source or authority and correct scope.
-- A Coder implementation choice is evidence about Coder, not proof that ARC must make the same choice.
-- If a Coder example remains useful, preserve only a concise, explicitly non-authoritative precedent note.
-- Questions about whether a Coder constraint also applies to ARC belong in "open-questions.md" or a justified U#.
-- Implementation conventions that may help later can move to an implementation README only when they remain genuinely useful; otherwise defer or remove them.
-- Do not let Coder precedent determine ARC architecture implicitly.
+Possible reuse of "ccoe-ami" does not make these choices immutable.
 
-Visual decision tracker
+Separate observed current behavior from:
 
-The visual decision tracker is useful to the developer and is outside this cleanup.
+- an ARC requirement,
+- a future implementation choice,
+- a compatibility question,
+- and a predicted ARC benefit.
 
-- Do not delete, redesign, or modify the tracker application.
-- Do not count its application source files as planning files the developer must read.
-- Do not delete or rename an input that is required for the tracker to continue building.
-- If "dependency-graph.md", generated graph data, or another duplicate is currently required by the tracker, leave it intact for now and clearly label/report it as a non-authoritative projection or deferred integration issue.
-- Do not make the tracker’s future adaptation a blocker for this consolidation.
+F16–F20: CDER/Coder precedent
 
-Verify that tracker-owned files are unchanged.
+Determine whether these entries describe only the reference implementation or something ARC independently adopted.
 
-Ticket backlog and duplicate state
+Pay particular attention to:
 
-Reduce the large agent-authored ticket backlog to a compact register when that can be done without losing real identifiers.
+- EKS Auto Mode
+- EKS module and Kubernetes versions
+- API authentication settings
+- private-only EKS API access
+- tagged subnet discovery
+- whether ARC creates or consumes networking
+- prohibiting long-lived credentials
+- IRSA versus EKS Pod Identity
+- permissions boundaries
+- claims based on an unverified organizational policy
 
-Preserve:
+For negative findings such as “none of the examined repositories creates VPC resources,” preserve the bounded search result without turning it into an organization-wide conclusion or an ARC design decision.
 
-- every real Jira key;
-- readable title;
-- known status;
-- genuine unresolved gap not already owned elsewhere.
+For ADR-derived statements, verify whether the ADR is accepted, proposed, historical, copied, or unresolved.
 
-Jira or the project’s real ticket system remains canonical for ordered implementation work. Do not retain a second hand-maintained ready frontier in the repository, and do not invent or mutate external tickets.
+F21: mixed evidence and authority
 
-Fix broken links and remove duplicate dependency/frontier descriptions only when doing so does not break the out-of-scope visual tracker.
+Separate:
 
-Boundaries
+- details of the reference project’s Terraform delivery chain, and
+- any current ARC maintainer clarification that migration will be phased and existing runners will remain available.
 
-- Do not conduct another broad audit.
-- Do not broadly research every surviving claim.
-- Use the prior audit findings and already collected primary-source evidence.
-- Inspect a source only when necessary to preserve or correct a specific claim during consolidation.
-- Do not decide unresolved project architecture, sizing, regional topology, execution mode, security exceptions, or stakeholder-owned policy.
-- Do not create a new planning subsystem, registry, archive, migration log, or compatibility layer.
-- Git is sufficient history; do not retain duplicate files merely as an archive.
+The latter may be a real ARC migration fact even when the former is only reference evidence.
 
-Acceptance checks
+F24–F25: CIDRs and network observations
 
-Before committing, verify:
+Determine whether these are merely repository-visible, dated observations rather than:
 
-- A fresh developer can understand the destination, current state, adopted decisions, assumptions, active blockers, development-validation items, and next action from "map.md".
-- Facts and decisions remain owned by the Wayfinder effort.
-- Every surviving fact has truthful typed provenance and scope.
-- Every accepted or provisional decision has actual authority.
-- No assumption or proposal is presented as an established fact or accepted decision.
-- All valuable content from retired files survives in the map, ledgers, surviving U#/E# artifacts, stakeholder worksheet, or another justified canonical owner.
-- No current Markdown link is dangling or misleading.
-- Jira keys are preserved.
-- The capacity analysis remains evidence and retains its calculations and limitations.
-- The visual decision tracker and its required inputs are unchanged.
-- No framework-owned installation files were hand-edited.
-- The branch contains no unrelated changes.
+- an authoritative network inventory,
+- an enterprise-wide non-overlap check,
+- or final ARC network allocation.
+
+Do not let raw repository snapshots substitute for current network authority.
+
+Claude’s current candidate cleanup
+
+Assess whether the uncommitted changes:
+
+- correctly separate prior art from ARC truth,
+- merely replace "CDER" or "Coder" with generic terms,
+- preserve inherited design assumptions under less visible wording,
+- move reference-project choices into ARC-facing Terraform documentation,
+- obscure or weaken provenance,
+- introduce unsupported ARC conclusions,
+- correct valid stale links or paths,
+- modify unrelated operational instructions,
+- or touch workflows and executable artifacts beyond safe documentation cleanup.
+
+Do not assume generic wording is more accurate.
+
+Required output
+
+Return one focused audit report with five sections.
+
+1. Repository state and executive verdict
 
 Report:
 
-- base SHA, branch, commit SHA, and push status;
-- before/after Wayfinder file and approximate line counts;
-- resulting structure;
-- retired and consolidated records;
-- tracker files verified unchanged;
-- unresolved architecture/authority questions;
-- verification performed;
-- whether final validation against the parallel Agent Workflow branch remains pending.
+- target branch and "HEAD" SHA
+- target working-tree status
+- concise description of any current candidate diff
+- each available reference repository’s branch and SHA
+- unavailable or unverifiable sources
 
-Do not merge.
+Then give one verdict:
+
+- "SUPPORTED"
+- "PARTIALLY SUPPORTED"
+- "NOT SUPPORTED"
+
+State plainly:
+
+- whether reference inheritance is a real problem,
+- its practical severity,
+- whether the committed baseline overstates external authority,
+- and whether Claude’s candidate cleanup materially solves it.
+
+2. Claim-classification inventory
+
+Produce a table with these columns:
+
+| ID or file | Current claim | Source and revision | What the source proves | Applies to | Current problem | Recommended classification | Recommended disposition | Human decision needed |
+
+Use concrete dispositions such as:
+
+- keep
+- narrow
+- split
+- move to evidence
+- move to decisions
+- convert to unknown
+- retain as migration constraint
+- retain citation but rewrite interpretation
+- remove from active state
+- investigate separately
+
+Group mechanically identical items when appropriate, but do not combine materially different claims or lose traceability to fact and decision IDs.
+
+3. Minimal-assumption ARC baseline
+
+Provide two concise groups:
+
+Safe to treat as established now
+
+Include only independently supported ARC truths, authority-backed requirements, accepted decisions, and real migration constraints.
+
+Must remain unresolved or non-binding
+
+Include reference implementation choices, candidate reuse, observed conventions, volatile snapshots, unsupported inferences, and unresolved authority questions.
+
+Keep the established baseline intentionally small.
+
+4. Claude diff and suspicious artifacts
+
+For Claude’s current candidate diff, identify:
+
+- sound corrections
+- cosmetic renaming that leaves the underlying problem
+- unsupported or harmful changes
+- unrelated but potentially valid fixes
+- items requiring user approval
+
+Then list any suspicious copied workflows or artifacts, including examples such as "create-tag.yaml", "check-label.yaml", or workflow-dispatch files when present.
+
+For each suspicious artifact, report:
+
+- apparent origin
+- current ARC purpose or lack of one
+- whether it appears executable in this repository
+- missing dependencies or referenced reusable workflows
+- recommended separate investigation
+
+Do not repair or delete anything.
+
+5. Recommended implementation plan and unresolved authority questions
+
+Provide a small, ordered implementation plan using exact target-repository paths.
+
+Separate:
+
+- mechanical reclassification and cross-reference work
+- changes requiring human authority
+- workflow or executable-artifact investigations
+- verification checks
+
+Use the exact implementation branch name:
+
+fix/wayfinder-reference-inheritance
+
+Do not create the branch or implement the plan.
+
+Ask only questions that require genuine user, owner, security, IAM, networking, or platform authority and cannot be answered from the available repositories.
+
+For each question, state what classification or design choice it blocks.
+
+Constraints
+
+Do not:
+
+- globally replace "CDER", "Coder", or "ccoe-ami"
+- alter truthful repository names or source paths
+- anonymize provenance
+- treat observed conventions as organizational mandates
+- treat bounded negative searches as proof of general absence
+- treat likely reuse as an ARC decision
+- preserve detailed legacy facts merely because they might eventually be useful
+- delete or repair workflows during this audit
+- introduce a new state type, registry, or documentation subsystem
+- generate a patch
+- make any repository change
+- begin the implementation pass
+
+Stop after returning the audit report.
